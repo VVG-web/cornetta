@@ -152,7 +152,11 @@ struct LibraryView: View {
                     ContentUnavailableView("Nessuna registrazione", systemImage: "phone",
                                            description: Text("Avvia una registrazione dalla cornetta nella barra dei menu."))
                 } else if filtered.isEmpty {
-                    ContentUnavailableView.search(text: search)
+                    ContentUnavailableView {
+                        Label(L10n.text(.libraryNoResultsTitle, language: language), systemImage: "magnifyingglass")
+                    } description: {
+                        Text(L10n.format(.libraryNoResultsMessage, language: language, search))
+                    }
                 }
             }
             .navigationSplitViewColumnWidth(min: 250, ideal: 290, max: 380)
@@ -256,6 +260,7 @@ struct RecordingDetail: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .confirmationDialog("Eliminare questa registrazione?", isPresented: $confirmDelete) {
             Button("Sposta nel Cestino", role: .destructive) { library.delete(recording) }
+            Button("Annulla", role: .cancel) {}
         } message: {
             Text("L'audio e la trascrizione vanno nel Cestino. Puoi recuperarli da lì.")
         }

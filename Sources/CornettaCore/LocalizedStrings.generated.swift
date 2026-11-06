@@ -54,6 +54,7 @@ public enum L10nKey: String, CaseIterable, Sendable {
     case libraryCopy = "library.copy"
     case libraryDelete = "library.delete"
     case libraryDeleteButton = "library.delete.button"
+    case libraryDeleteCancel = "library.delete.cancel"
     case libraryDeleteMessage = "library.delete.message"
     case libraryDeleteTitle = "library.delete.title"
     case libraryDuration = "library.duration"
@@ -65,6 +66,8 @@ public enum L10nKey: String, CaseIterable, Sendable {
     case libraryListenFromAccessibility = "library.listenFrom.accessibility"
     case libraryMarkdownDuration = "library.markdown.duration"
     case libraryMarkdownOrigin = "library.markdown.origin"
+    case libraryNoResultsMessage = "library.noResults.message"
+    case libraryNoResultsTitle = "library.noResults.title"
     case libraryNoSpeechMessage = "library.noSpeech.message"
     case libraryNoSpeechTitle = "library.noSpeech.title"
     case libraryNotTranscribedAvailable = "library.notTranscribed.available"
@@ -304,6 +307,7 @@ public enum L10n {
         .libraryCopy: "Copia testo",
         .libraryDelete: "Elimina…",
         .libraryDeleteButton: "Sposta nel Cestino",
+        .libraryDeleteCancel: "Annulla",
         .libraryDeleteMessage: "L'audio e la trascrizione vanno nel Cestino. Puoi recuperarli da lì.",
         .libraryDeleteTitle: "Eliminare questa registrazione?",
         .libraryDuration: "Durata {0}",
@@ -315,6 +319,8 @@ public enum L10n {
         .libraryListenFromAccessibility: "Ascolta da {0}",
         .libraryMarkdownDuration: "Durata {0}",
         .libraryMarkdownOrigin: "Trascrizione locale di Cornetta",
+        .libraryNoResultsMessage: "Nessuna registrazione contiene «{0}».",
+        .libraryNoResultsTitle: "Nessun risultato",
         .libraryNoSpeechMessage: "La registrazione sembra vuota o troppo bassa.",
         .libraryNoSpeechTitle: "Nessuna voce riconosciuta",
         .libraryNotTranscribedAvailable: "La trascrizione avviene sul Mac: niente esce dal computer.",
@@ -553,6 +559,7 @@ public enum L10n {
         .libraryCopy: "Copy text",
         .libraryDelete: "Delete…",
         .libraryDeleteButton: "Move to Trash",
+        .libraryDeleteCancel: "Cancel",
         .libraryDeleteMessage: "The audio and transcript go to the Trash. You can recover them there.",
         .libraryDeleteTitle: "Delete this recording?",
         .libraryDuration: "Duration {0}",
@@ -564,6 +571,8 @@ public enum L10n {
         .libraryListenFromAccessibility: "Play from {0}",
         .libraryMarkdownDuration: "Duration {0}",
         .libraryMarkdownOrigin: "Cornetta local transcript",
+        .libraryNoResultsMessage: "No recording contains “{0}”.",
+        .libraryNoResultsTitle: "No results",
         .libraryNoSpeechMessage: "The recording appears empty or too quiet.",
         .libraryNoSpeechTitle: "No speech recognized",
         .libraryNotTranscribedAvailable: "Transcription happens on this Mac: nothing leaves the computer.",
