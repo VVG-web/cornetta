@@ -3,8 +3,8 @@
 ## Source provenance
 
 The official Cornetta website links to `https://github.com/stellakamikaze/cornetta`.
-That repository is the canonical `upstream`. `VVG-web/cornetta` is a fork and remains
-`origin` in this checkout. At setup, both `master` branches pointed to commit
+That repository is the canonical `upstream`. `VVG-web/cornetta-en` is the clearly named fork and
+remains `origin` in this checkout. The old `VVG-web/cornetta` URL redirects to it. At setup, both `master` branches pointed to commit
 `af48825261415a5d1422916c706bacb1e9b2c0d0` (`v0.4.0`).
 
 Review future changes before executing downloaded scripts or dependencies:
