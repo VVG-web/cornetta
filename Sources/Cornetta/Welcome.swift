@@ -23,6 +23,7 @@ enum LaunchAtLogin {
 @MainActor
 enum WelcomeWindow {
     private static var window: NSWindow?
+    private static var languageObserver: NSObjectProtocol?
 
     static var shouldShow: Bool { !UserDefaults.standard.bool(forKey: "welcomeDone") }
 
@@ -30,14 +31,21 @@ enum WelcomeWindow {
         if window == nil {
             let window = NSWindow(contentRect: .zero, styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
             window.titlebarAppearsTransparent = true
-            window.title = "Benvenuto in Cornetta"
+            window.title = tr(.welcomeWindow)
             window.isReleasedWhenClosed = false
             window.contentView = NSHostingView(rootView: WelcomeView {
                 UserDefaults.standard.set(true, forKey: "welcomeDone")
                 WelcomeWindow.window?.close()
-            })
+            }.localizedRoot())
             window.center()
             self.window = window
+            if languageObserver == nil {
+                languageObserver = NotificationCenter.default.addObserver(
+                    forName: .cornettaLanguageChanged, object: nil, queue: .main
+                ) { _ in
+                    MainActor.assumeIsolated { WelcomeWindow.window?.title = tr(.welcomeWindow) }
+                }
+            }
         }
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
@@ -50,6 +58,7 @@ struct WelcomeView: View {
     @State private var systemAudioAsked = UserDefaults.standard.bool(forKey: "systemAudioPrimed")
     @State private var askingSystemAudio = false
     @State private var launchAtLogin = true
+    @Environment(\.appLanguage) private var language
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
@@ -65,17 +74,20 @@ struct WelcomeView: View {
 
             VStack(alignment: .leading, spacing: 14) {
                 Text("Due permessi, una volta sola").font(.headline)
-                PermissionRow(number: 1, title: "Microfono", detail: "Per registrare la tua voce.",
+                PermissionRow(number: 1, title: L10n.text(.welcomeMicrophone, language: language),
+                              detail: L10n.text(.welcomeMicrophoneDetail, language: language),
                               granted: micStatus == .authorized, denied: micStatus == .denied || micStatus == .restricted,
-                              action: "Consenti") {
+                              action: L10n.text(.welcomeAllow, language: language)) {
                     Task {
                         _ = await CallRecorder.requestMicrophoneAccess()
                         micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
                         if micStatus == .denied { openPrivacy("Privacy_Microphone") }
                     }
                 }
-                PermissionRow(number: 2, title: "Audio delle chiamate", detail: "Per registrare la voce degli altri. macOS lo chiama «Registrazione audio di sistema».",
-                              granted: systemAudioAsked, denied: false, action: askingSystemAudio ? "Attendi…" : "Consenti") {
+                PermissionRow(number: 2, title: L10n.text(.welcomeCallAudio, language: language),
+                              detail: L10n.text(.welcomeCallAudioDetail, language: language),
+                              granted: systemAudioAsked, denied: false,
+                              action: L10n.text(askingSystemAudio ? .welcomeWait : .welcomeAllow, language: language)) {
                     askingSystemAudio = true
                     Task {
                         await CallRecorder.primeSystemAudioPermission()
@@ -127,6 +139,7 @@ struct PermissionRow: View {
     let denied: Bool
     let action: String
     let onAsk: () -> Void
+    @Environment(\.appLanguage) private var language
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
@@ -140,15 +153,15 @@ struct PermissionRow: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.body.weight(.semibold))
-                Text(denied ? "Negato: riattivalo nelle Impostazioni." : detail)
+                Text(denied ? L10n.text(.permissionDenied, language: language) : detail)
                     .font(.callout).foregroundStyle(denied ? .red : .secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
             if granted {
-                Text("Fatto").foregroundStyle(.secondary)
+                Text(L10n.text(.permissionDone, language: language)).foregroundStyle(.secondary)
             } else {
-                Button(denied ? "Apri Impostazioni" : action, action: onAsk)
+                Button(denied ? L10n.text(.permissionOpenSettings, language: language) : action, action: onAsk)
             }
         }
     }

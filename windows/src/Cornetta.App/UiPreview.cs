@@ -35,18 +35,24 @@ namespace Cornetta.App
                     overlay.UpdateState("1:02:09", 0.1f, 0f, null, true);
                     Save(overlay, Path.Combine(dir, "pannello-chiamata-finita" + suffix + ".png"));
 
-                    Save(new NoticeForm("call", "\uE717", Theme.Red, "Chiamata in corso su WhatsApp",
-                        "Vuoi registrarla? Registro la tua voce e quella delle altre persone in un file.",
-                        "Registra", "Non ora", () => { }, () => { }), Path.Combine(dir, "avviso-chiamata" + suffix + ".png"));
-                    Save(new NoticeForm("update", "\uE896", Theme.Blue, "Aggiornamento disponibile",
-                        "È pronta Cornetta 0.3.0. L'installazione richiede pochi secondi e l'app si riapre da sola.",
-                        "Aggiorna ora", "Più tardi", () => { }, () => { }), Path.Combine(dir, "avviso-aggiornamento" + suffix + ".png"));
-                    Save(new NoticeForm("ended", "\uE778", Theme.Orange, "La chiamata sembra finita",
-                        "Cornetta sta ancora registrando.", "Ferma e salva", "Continua", () => { }, () => { }),
-                        Path.Combine(dir, "avviso-fine" + suffix + ".png"));
-                    Save(new NoticeForm("silence", "", Theme.Orange, "Non sento la voce degli altri",
-                        "La chiamata è in corso, ma da Altoparlanti (Realtek(R) Audio) non arriva niente. Controlla quale uscita usa l'app della chiamata.",
-                        "Apri impostazioni audio", "Chiudi", () => { }, () => { }), Path.Combine(dir, "avviso-silenzio" + suffix + ".png"));
+            Save(new NoticeForm("call", "\uE717", Theme.Red,
+                L10n.Format(L10nKey.NoticeCallTitle, "WhatsApp"),
+                L10n.Text(L10nKey.NoticeCallMessage),
+                L10n.Text(L10nKey.NoticeRecord), L10n.Text(L10nKey.NoticeNotNow), () => { }, () => { }),
+                Path.Combine(dir, "avviso-chiamata" + suffix + ".png"));
+            Save(new NoticeForm("update", "\uE896", Theme.Blue, L10n.Text(L10nKey.NoticeUpdateTitle),
+                L10n.Format(L10nKey.NoticeUpdateMessage, "0.3.0"),
+                L10n.Text(L10nKey.NoticeUpdateNow), L10n.Text(L10nKey.NoticeUpdateLater),
+                () => { }, () => { }), Path.Combine(dir, "avviso-aggiornamento" + suffix + ".png"));
+            Save(new NoticeForm("ended", "\uE778", Theme.Orange, L10n.Text(L10nKey.NoticeCallEndedTitle),
+                L10n.Text(L10nKey.NoticeCallEndedMessage),
+                L10n.Text(L10nKey.NoticeStopAndSave), L10n.Text(L10nKey.CommonContinue),
+                () => { }, () => { }),
+                Path.Combine(dir, "avviso-fine" + suffix + ".png"));
+            Save(new NoticeForm("silence", "", Theme.Orange, L10n.Text(L10nKey.WindowsNoticeSilenceTitle),
+                L10n.Format(L10nKey.WindowsNoticeSilenceMessage, "Altoparlanti (Realtek(R) Audio)"),
+                L10n.Text(L10nKey.WindowsNoticeAudioSettings), L10n.Text(L10nKey.CommonClose),
+                () => { }, () => { }), Path.Combine(dir, "avviso-silenzio" + suffix + ".png"));
                 }
                 Theme.Override = null;
                 Save(new FeedbackForm("Microfono (Realtek(R) Audio)"), Path.Combine(dir, "feedback.png"));

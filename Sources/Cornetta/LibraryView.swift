@@ -9,6 +9,7 @@ enum LibraryWindow {
     private static var window: NSWindow?
     private static var delegate: WindowDelegate?
     private static var spaceMonitor: Any?
+    private static var languageObserver: NSObjectProtocol?
 
     static func show(select id: String? = nil) {
         Library.shared.reload()
@@ -17,15 +18,23 @@ enum LibraryWindow {
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 980, height: 640),
                                   styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                                   backing: .buffered, defer: false)
-            window.title = "Registrazioni"
+            window.title = tr(.libraryWindow)
             window.isReleasedWhenClosed = false
-            window.contentView = NSHostingView(rootView: LibraryView(library: .shared, selection: .shared))
+            window.contentView = NSHostingView(rootView: LibraryView(library: .shared, selection: .shared)
+                .localizedRoot())
             window.setFrameAutosaveName("CornettaLibrary")
             if window.frame.width < 700 { window.center() }
             let delegate = WindowDelegate()
             window.delegate = delegate
             self.delegate = delegate
             self.window = window
+            if languageObserver == nil {
+                languageObserver = NotificationCenter.default.addObserver(
+                    forName: .cornettaLanguageChanged, object: nil, queue: .main
+                ) { _ in
+                    MainActor.assumeIsolated { LibraryWindow.window?.title = tr(.libraryWindow) }
+                }
+            }
             spaceMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
                 playPause(on: event) ? nil : event
             }
@@ -122,6 +131,7 @@ struct LibraryView: View {
     @ObservedObject var library: Library
     @ObservedObject var selection: LibrarySelection
     @State private var search = ""
+    @Environment(\.appLanguage) private var language
 
     private var filtered: [Library.Recording] {
         let query = search.trimmingCharacters(in: .whitespaces).lowercased()
@@ -135,7 +145,8 @@ struct LibraryView: View {
                 RecordingRow(recording: recording, library: library, query: search)
                     .tag(recording.id)
             }
-            .searchable(text: $search, placement: .sidebar, prompt: "Cerca nelle trascrizioni")
+            .searchable(text: $search, placement: .sidebar,
+                        prompt: L10n.text(.librarySearch, language: language))
             .overlay {
                 if library.recordings.isEmpty {
                     ContentUnavailableView("Nessuna registrazione", systemImage: "phone",
@@ -165,17 +176,11 @@ struct RecordingRow: View {
     let recording: Library.Recording
     @ObservedObject var library: Library
     let query: String
-
-    private static let dateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "it_IT")
-        f.dateFormat = "EEE d MMM, HH:mm"
-        return f
-    }()
+    @Environment(\.appLanguage) private var language
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(Self.capitalizedFirst(Self.dateFormatter.string(from: recording.date)))
+            Text(Self.capitalizedFirst(formattedDate))
                 .font(.body.weight(.semibold))
             HStack(spacing: 6) {
                 Text(TranscriptFormatter.timestamp(recording.duration)).monospacedDigit()
@@ -195,24 +200,38 @@ struct RecordingRow: View {
         text.prefix(1).uppercased() + text.dropFirst()
     }
 
+    private var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.locale = language.locale
+        formatter.setLocalizedDateFormatFromTemplate("EEEdMMM HHmm")
+        return formatter.string(from: recording.date)
+    }
+
     /// Con una ricerca attiva mostra la frase che contiene la parola cercata.
     private var snippet: String? {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
         guard !q.isEmpty, let transcript = library.transcripts[recording.id] else { return nil }
-        return transcript.segments.first { $0.text.lowercased().contains(q) }.map { "\($0.speaker.label): \($0.text)" }
+        return transcript.segments.first { $0.text.lowercased().contains(q) }.map {
+            "\($0.speaker.label(language: language)): \($0.text)"
+        }
     }
 }
 
 struct StatusLabel: View {
     let status: Library.Status
+    @Environment(\.appLanguage) private var language
 
     var body: some View {
         switch status {
         case .done: Label("Trascritta", systemImage: "text.bubble").labelStyle(.titleOnly)
         case .queued: Text("In coda")
-        case .transcribing(let p, _): Text("Trascrivo \(Int(p * 100))%").monospacedDigit()
+        case .transcribing(let p, _):
+            Text(L10n.format(.libraryStatusTranscribing, language: language,
+                             String(Int(p * 100)))).monospacedDigit()
         case .failed: Text("Errore").foregroundStyle(.red)
-        case .notTranscribed: Text(SpeechEngine.isAvailable ? "Da trascrivere" : "Solo audio")
+        case .notTranscribed:
+            Text(L10n.text(SpeechEngine.isAvailable ? .libraryStatusNotTranscribed : .libraryStatusAudioOnly,
+                           language: language))
         }
     }
 }
@@ -223,6 +242,7 @@ struct RecordingDetail: View {
     @ObservedObject var player: AudioPlayer
     @State private var confirmDelete = false
     @State private var copied = false
+    @Environment(\.appLanguage) private var language
 
     private var transcript: Transcript? { library.transcripts[recording.id] }
     private var playingThis: Bool { player.playingID == recording.id }
@@ -252,7 +272,7 @@ struct RecordingDetail: View {
                     .background(Color.accentColor.opacity(0.12), in: Circle())
             }
             .buttonStyle(.plain)
-            .help(playingThis && player.isPlaying ? "Pausa" : "Ascolta")
+            .help(L10n.text(playingThis && player.isPlaying ? .libraryPause : .libraryPlay, language: language))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(library.title(for: recording)).font(.title3.weight(.semibold))
@@ -260,7 +280,7 @@ struct RecordingDetail: View {
             }
             Spacer()
             if transcript != nil {
-                Button(copied ? "Copiato" : "Copia testo") {
+                Button(L10n.text(copied ? .libraryCopied : .libraryCopy, language: language)) {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(library.markdown(for: recording) ?? "", forType: .string)
                     copied = true
@@ -294,9 +314,13 @@ struct RecordingDetail: View {
     }
 
     private var meta: String {
-        var parts = ["Durata \(TranscriptFormatter.timestamp(recording.duration))"]
+        var parts = [L10n.format(.libraryDuration, language: language,
+                                 TranscriptFormatter.timestamp(recording.duration))]
         if playingThis { parts.insert(TranscriptFormatter.timestamp(player.currentTime), at: 0) }
-        if transcript != nil { parts.append(recording.hasTracks ? "Tu e Altri separati" : "Voci non separate") }
+        if transcript != nil {
+            parts.append(L10n.text(recording.hasTracks ? .libraryTracksSeparated : .libraryTracksMixed,
+                                   language: language))
+        }
         return parts.joined(separator: " · ")
     }
 
@@ -318,11 +342,12 @@ struct RecordingDetail: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .queued:
             ContentUnavailableView("In coda", systemImage: "clock", description: Text("La trascrizione parte appena finisce quella in corso."))
-        case .failed(let error):
+        case .failed:
+            let shown = L10n.text(.libraryTranscriptionFailed, language: language)
             ContentUnavailableView {
                 Label("Trascrizione non riuscita", systemImage: "exclamationmark.triangle")
             } description: {
-                Text(error)
+                Text(shown)
             } actions: {
                 Button("Riprova") { library.enqueue(recording.url) }
             }
@@ -331,9 +356,9 @@ struct RecordingDetail: View {
                 ContentUnavailableView {
                     Label("Non ancora trascritta", systemImage: "text.bubble")
                 } description: {
-                    Text(recording.hasTracks
-                         ? "La trascrizione avviene sul Mac: niente esce dal computer."
-                         : "Registrazione fatta prima della trascrizione: le voci non saranno separate.")
+                    Text(L10n.text(recording.hasTracks ? .libraryNotTranscribedAvailable
+                                                       : .libraryNotTranscribedOld,
+                                   language: language))
                 } actions: {
                     Button("Trascrivi") { library.enqueue(recording.url) }.buttonStyle(.borderedProminent)
                 }
@@ -392,6 +417,7 @@ struct TurnRow: View {
     let turn: Transcript.Segment
     let active: Bool
     let onPlay: () -> Void
+    @Environment(\.appLanguage) private var language
 
     private var color: Color {
         switch turn.speaker {
@@ -410,10 +436,11 @@ struct TurnRow: View {
                     .frame(width: 52, alignment: .trailing)
             }
             .buttonStyle(.plain)
-            .help("Ascolta da qui")
-            .accessibilityLabel("Ascolta da \(TranscriptFormatter.timestamp(turn.start))")
+            .help(L10n.text(.libraryListenFrom, language: language))
+            .accessibilityLabel(L10n.format(.libraryListenFromAccessibility, language: language,
+                                            TranscriptFormatter.timestamp(turn.start)))
             VStack(alignment: .leading, spacing: 3) {
-                Text(turn.speaker.label)
+                Text(turn.speaker.label(language: language))
                     .font(.caption.weight(.bold))
                     .foregroundStyle(color)
                 Text(turn.text)

@@ -1,9 +1,11 @@
 import AppKit
+import CornettaCore
 import SwiftUI
 
 /// Pannello mostrato durante la registrazione.
 struct RecordingOverlayView: View {
     @ObservedObject var model: RecorderModel
+    @Environment(\.appLanguage) private var language
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -22,8 +24,8 @@ struct RecordingOverlayView: View {
                     .font(.system(.title3, design: .rounded).monospacedDigit().weight(.semibold))
                     .frame(minWidth: 64, alignment: .leading)
                 VStack(alignment: .leading, spacing: 5) {
-                    LevelBar(label: "Tu", level: model.micLevel, tint: .blue)
-                    LevelBar(label: "Altri", level: model.systemLevel, tint: .green)
+                    LevelBar(label: L10n.text(.overlayYou, language: language), level: model.micLevel, tint: .blue)
+                    LevelBar(label: L10n.text(.overlayOthers, language: language), level: model.systemLevel, tint: .green)
                 }
                 .frame(width: 120)
                 Button {
@@ -35,7 +37,7 @@ struct RecordingOverlayView: View {
                 .help("Ferma e salva la registrazione")
             }
             HStack {
-                Label(model.microphoneName ?? "Senza microfono: registro solo la chiamata",
+                Label(model.microphoneName ?? L10n.text(.windowsOverlayNoMicrophone, language: language),
                       systemImage: model.microphoneName == nil ? "mic.slash" : "mic.fill")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -74,6 +76,7 @@ struct LevelBar: View {
     let label: String
     let level: Float
     let tint: Color
+    @Environment(\.appLanguage) private var language
 
     var body: some View {
         HStack(spacing: 6) {
@@ -88,7 +91,8 @@ struct LevelBar: View {
             .animation(.linear(duration: 0.1), value: level)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(label): livello \(Int(level * 100)) per cento")
+        .accessibilityLabel(L10n.format(.overlayLevelAccessibility, language: language,
+                                        label, String(Int(level * 100))))
     }
 }
 

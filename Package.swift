@@ -15,6 +15,7 @@ let package = Package(
         .executableTarget(
             name: "Cornetta",
             dependencies: ["CornettaCore", .product(name: "Sparkle", package: "Sparkle")],
+            exclude: ["Resources"],
             linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])]
         ),
         .testTarget(name: "CornettaCoreTests", dependencies: ["CornettaCore"]),

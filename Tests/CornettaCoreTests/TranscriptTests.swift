@@ -77,6 +77,21 @@ struct TranscriptTests {
         #expect(md.contains("**Altri** (00:02): Ciao!"))
     }
 
+    @Test func speakerLabelsAndMarkdownFollowTheSelectedLanguage() throws {
+        let t = Transcript(recording: "x.m4a", engine: "test", language: "it_IT", segments: [
+            S(speaker: .me, start: 0, end: 1, text: "Ciao"),
+            S(speaker: .others, start: 1, end: 2, text: "Hello"),
+            S(speaker: .mixed, start: 2, end: 3, text: "Mixed"),
+        ])
+        #expect(t.plainText(language: .english) == "You: Ciao\nOthers: Hello\nUnattributed voice: Mixed")
+        let md = TranscriptFormatter.markdown(t, title: "Call on Monday", duration: 75, language: .english)
+        #expect(md.contains("Duration 01:15"))
+        #expect(md.contains("Cornetta local transcript"))
+        #expect(md.contains("**You**"))
+        #expect(md.contains("**Others**"))
+        #expect(md.contains("**Unattributed voice**"))
+    }
+
     @Test func roundTripsThroughJSON() throws {
         let t = Transcript(recording: "x.m4a", engine: "SpeechTranscriber", language: "it_IT",
                            segments: [S(speaker: .mixed, start: 0, end: 1, text: "Prova")])

@@ -189,6 +189,28 @@ namespace Cornetta.App
             set => Set("FeedbackEmail", value);
         }
 
+        public static string Language
+        {
+            get => GetString("Language");
+            set => Set("Language", value);
+        }
+
+        /// <summary>True when an older Cornetta has already written any preference.</summary>
+        public static bool HasExistingPreferences
+        {
+            get
+            {
+                try
+                {
+                    using (var key = Registry.CurrentUser.OpenSubKey(KeyPath))
+                    {
+                        return key != null && key.GetValueNames().Length > 0;
+                    }
+                }
+                catch (Exception) { return false; }
+            }
+        }
+
         /// <summary>Solo per le prove: un altro indirizzo per gli aggiornamenti (come CornettaFeedOverride sul Mac).</summary>
         public static string? FeedOverride
         {

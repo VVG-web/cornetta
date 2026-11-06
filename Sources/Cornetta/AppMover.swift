@@ -20,11 +20,11 @@ enum AppMover {
         NSApp.activate(ignoringOtherApps: true)
         let others = otherInstances()
         let alert = NSAlert()
-        alert.messageText = "Sposta Cornetta in Applicazioni"
-        alert.informativeText = "Cornetta è aperta dal disco di installazione. Spostala in Applicazioni: così si aggiorna da sola e ricorda i permessi."
-            + (others.isEmpty ? "" : " La Cornetta già aperta si chiude: una registrazione in corso si ferma e si salva.")
-        alert.addButton(withTitle: "Sposta in Applicazioni")
-        alert.addButton(withTitle: "Non ora")
+        alert.messageText = tr(.appMoverMoveTitle)
+        alert.informativeText = tr(.appMoverMoveMessage)
+            + (others.isEmpty ? "" : " " + tr(.appMoverMoveMessageOthers))
+        alert.addButton(withTitle: tr(.appMoverMoveButton))
+        alert.addButton(withTitle: tr(.appMoverNotNow))
         guard alert.runModal() == .alertFirstButtonReturn else { return false }
 
         let destination = URL(fileURLWithPath: "/Applications/Cornetta.app")
@@ -32,8 +32,8 @@ enum AppMover {
         if let installed = version(of: destination)?.short, let running = version(of: Bundle.main.bundleURL)?.short,
            installed.compare(running, options: .numeric) == .orderedDescending {
             let newer = NSAlert()
-            newer.messageText = "In Applicazioni c'è già una Cornetta più recente"
-            newer.informativeText = "La versione in Applicazioni è la \(installed), questa è la \(running). Apri Cornetta da Applicazioni ed espelli il disco di installazione."
+            newer.messageText = tr(.appMoverNewerTitle)
+            newer.informativeText = tr(.appMoverNewerMessage, installed, running)
             newer.runModal()
             return false
         }
@@ -41,8 +41,8 @@ enum AppMover {
         // nuova le lascerebbe il posto (handOffToRunningInstance): si chiude prima di installare.
         guard closeAll(others) else {
             let busy = NSAlert()
-            busy.messageText = "Non riesco a chiudere la Cornetta già aperta"
-            busy.informativeText = "Chiudila dal suo menu con «Esci da Cornetta», poi apri di nuovo questa copia dal disco di installazione."
+            busy.messageText = tr(.appMoverBusyTitle)
+            busy.informativeText = tr(.appMoverBusyMessage)
             busy.runModal()
             return false
         }
@@ -57,8 +57,9 @@ enum AppMover {
                 DispatchQueue.main.async {
                     if let error {
                         let alert = NSAlert()
-                        alert.messageText = "Cornetta è in Applicazioni"
-                        alert.informativeText = "Aprila da lì con un doppio clic. (\(error.localizedDescription))"
+                        Diagnostics.log("Cornetta già in Applicazioni: \(error.localizedDescription)")
+                        alert.messageText = tr(.appMoverInstalledTitle)
+                        alert.informativeText = tr(.appMoverInstalledMessage)
                         alert.runModal()
                     } else {
                         NSApp.terminate(nil)
@@ -68,8 +69,9 @@ enum AppMover {
             return true
         } catch {
             let failure = NSAlert()
-            failure.messageText = "Non riesco a spostare Cornetta"
-            failure.informativeText = "Trascina Cornetta nella cartella Applicazioni dal disco di installazione. (\(error.localizedDescription))"
+            Diagnostics.log("Spostamento in Applicazioni non riuscito: \(error.localizedDescription)")
+            failure.messageText = tr(.appMoverFailedTitle)
+            failure.informativeText = tr(.appMoverFailedMessage)
             failure.runModal()
             return false
         }

@@ -121,7 +121,8 @@ struct FeedbackView: View {
                                           microphone: includeDiagnostics ? microphone : nil)
             sent = true
         } catch {
-            self.error = error.localizedDescription
+            Diagnostics.log("Feedback non inviato: \(error.localizedDescription)")
+            self.error = tr(.feedbackFailed)
         }
         sending = false
     }

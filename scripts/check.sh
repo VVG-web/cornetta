@@ -26,6 +26,9 @@ scripts=()
 while IFS= read -r script; do scripts+=("$script"); done < <(find scripts windows/tools -type f -name '*.sh' -print | sort)
 shellcheck --severity=error "${scripts[@]}"
 
+section "Localization catalog"
+python3 scripts/localization.py --check
+
 section "SwiftLint"
 mkdir -p test-results
 if ! swiftlint lint --quiet >test-results/swiftlint.txt 2>&1; then
@@ -56,6 +59,10 @@ APP="$MOUNT/Cornetta.app"
 [ -d "$APP/Contents/Frameworks/Sparkle.framework" ]
 [ "$(plutil -extract CFBundleIdentifier raw -o - "$APP/Contents/Info.plist")" = com.stellakamikaze.cornetta ]
 [ "$(plutil -extract CFBundleVersion raw -o - "$APP/Contents/Info.plist")" = "${VERSION:-0.0.0-dev}" ]
+[ -s "$APP/Contents/Resources/it.lproj/Localizable.strings" ]
+[ -s "$APP/Contents/Resources/en.lproj/Localizable.strings" ]
+[ -s "$APP/Contents/Resources/it.lproj/InfoPlist.strings" ]
+[ -s "$APP/Contents/Resources/en.lproj/InfoPlist.strings" ]
 [ -L "$MOUNT/Applicazioni" ]
 [ "$(readlink "$MOUNT/Applicazioni")" = /Applications ]
 lipo -info "$APP/Contents/MacOS/Cornetta" | grep -q arm64

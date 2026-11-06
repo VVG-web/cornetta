@@ -1,0 +1,3 @@
+"NSMicrophoneUsageDescription" = "Cornetta registra la tua voce durante le chiamate.";
+"NSAudioCaptureUsageDescription" = "Cornetta registra l'audio delle chiamate, cioè la voce delle altre persone.";
+"NSHumanReadableCopyright" = "Software libero, licenza MIT.";

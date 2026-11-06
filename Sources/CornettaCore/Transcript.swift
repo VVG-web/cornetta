@@ -10,12 +10,16 @@ public struct Transcript: Codable, Equatable, Sendable {
         /// Registrazioni vecchie senza tracce separate: voce non attribuita.
         case mixed
 
-        public var label: String {
+        public var labelKey: L10nKey {
             switch self {
-            case .me: return "Tu"
-            case .others: return "Altri"
-            case .mixed: return "Voce"
+            case .me: return .speakerMe
+            case .others: return .speakerOthers
+            case .mixed: return .speakerMixed
             }
+        }
+
+        public func label(language: AppLanguage = .italian) -> String {
+            L10n.text(labelKey, language: language)
         }
     }
 
@@ -61,8 +65,13 @@ public struct Transcript: Codable, Equatable, Sendable {
         return decoder
     }()
 
+    public func plainText(language: AppLanguage = .italian) -> String {
+        segments.map { "\($0.speaker.label(language: language)): \($0.text)" }.joined(separator: "\n")
+    }
+
+    /// Italian plain text for older call sites. New UI passes the selected language explicitly.
     public var plainText: String {
-        segments.map { "\($0.speaker.label): \($0.text)" }.joined(separator: "\n")
+        plainText(language: .italian)
     }
 }
 
@@ -156,15 +165,16 @@ public enum TranscriptFormatter {
     }
 
     /// Markdown leggibile, con le battute consecutive della stessa voce unite.
-    public static func markdown(_ transcript: Transcript, title: String, duration: Double?) -> String {
+    public static func markdown(_ transcript: Transcript, title: String, duration: Double?,
+                                language: AppLanguage = .italian) -> String {
         var lines = ["# \(title)", ""]
         var meta: [String] = []
-        if let duration { meta.append("Durata \(timestamp(duration))") }
-        meta.append("Trascrizione locale di Cornetta")
+        if let duration { meta.append(L10n.format(.libraryMarkdownDuration, language: language, timestamp(duration))) }
+        meta.append(L10n.text(.libraryMarkdownOrigin, language: language))
         lines.append(meta.joined(separator: " · "))
         lines.append("")
         for turn in turns(transcript.segments) {
-            lines.append("**\(turn.speaker.label)** (\(timestamp(turn.start))): \(turn.text)")
+            lines.append("**\(turn.speaker.label(language: language))** (\(timestamp(turn.start))): \(turn.text)")
             lines.append("")
         }
         return lines.joined(separator: "\n")

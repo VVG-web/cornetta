@@ -3,6 +3,7 @@ excluded:
   - build
   - dist
   - .venv
+  - Sources/CornettaCore/LocalizedStrings.generated.swift
 
 # Preserve the existing code style. Warnings retain the normal thresholds;
 # errors are reserved for outliers that deserve immediate attention.

@@ -14,6 +14,8 @@ Registratore di chiamate gratuito per Mac. Registra in un solo file la tua voce 
 
 Cornetta vive nella barra dei menu. Un clic avvia la registrazione, un clic la ferma. Il file finisce in `~/Music/Cornetta/` con il nome `Chiamata AAAA-MM-GG HH.MM.m4a`.
 
+**Italiano o inglese.** Dal menu della cornetta, in **Lingua / Language**, scegli l'interfaccia. La scelta resta salvata; una nuova installazione segue la lingua di sistema e tutte le altre lingue usano l'italiano. Su Windows la stessa voce è nel menu dell'area di notifica.
+
 ## Requisiti
 
 - macOS 14.4 o successivo.

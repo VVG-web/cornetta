@@ -325,25 +325,27 @@ final class Library: ObservableObject {
         let started = Date()
         do {
             let locale = await SpeechEngine.locale()
-            try await SpeechEngine.prepare(locale: locale) { [weak self] message in
-                Task { @MainActor in self?.report(id, 0, message) }
+            try await SpeechEngine.prepare(locale: locale) { [weak self] _ in
+                Task { @MainActor in
+                    self?.report(id, 0, L10n.text(.speechPreparing, language: Localization.shared.language))
+                }
             }
-            statuses[id] = .transcribing(0, "Trascrivo…")
+            statuses[id] = .transcribing(0, tr(.libraryTranscribing))
             let segments: [Transcript.Segment]
             if let others {
                 let theirs = try await SpeechEngine.transcribe(others, speaker: .others, locale: locale) { [weak self] p in
-                    Task { @MainActor in self?.report(id, p * 0.5, "Trascrivo la voce degli altri…") }
+                    Task { @MainActor in self?.report(id, p * 0.5, tr(.libraryTranscribingOthers)) }
                 }
                 var mine: [Transcript.Segment] = []
                 if let me {
                     mine = try await SpeechEngine.transcribe(me, speaker: .me, locale: locale) { [weak self] p in
-                        Task { @MainActor in self?.report(id, 0.5 + p * 0.5, "Trascrivo la tua voce…") }
+                        Task { @MainActor in self?.report(id, 0.5 + p * 0.5, tr(.libraryTranscribingMe)) }
                     }
                 }
                 segments = TranscriptMerger.merge(me: mine, others: theirs)
             } else {
                 segments = try await SpeechEngine.transcribe(url, speaker: .mixed, locale: locale) { [weak self] p in
-                    Task { @MainActor in self?.report(id, p, "Trascrivo…") }
+                    Task { @MainActor in self?.report(id, p, tr(.libraryTranscribing)) }
                 }
             }
             guard recordings.contains(where: { $0.id == id }) else { return }   // eliminata nel frattempo
@@ -356,7 +358,8 @@ final class Library: ObservableObject {
             Diagnostics.log(String(format: "Trascrizione pronta: %@, %d frasi in %.1f s", id, segments.count, Date().timeIntervalSince(started)))
             if let recording = recordings.first(where: { $0.id == id }) { onTranscriptReady?(recording) }
         } catch {
-            statuses[id] = .failed(error.localizedDescription)
+            Diagnostics.log("Trascrizione non riuscita: \(error.localizedDescription)")
+            statuses[id] = .failed(tr(.libraryTranscriptionFailed))
             if recordings.contains(where: { $0.id == id }) {
                 let failed = Failure(count: (failure(for: url)?.count ?? 0) + 1, error: error.localizedDescription)
                 try? FileManager.default.createDirectory(at: transcriptsRoot, withIntermediateDirectories: true)
@@ -377,26 +380,27 @@ final class Library: ObservableObject {
         try FileManager.default.createDirectory(at: transcriptsRoot, withIntermediateDirectories: true)
         try Transcript.encoder.encode(transcript).write(to: transcriptURL(for: url), options: .atomic)
         if saveMarkdown, let recording = recordings.first(where: { $0.url == url }) {
-            let markdown = TranscriptFormatter.markdown(transcript, title: title(for: recording), duration: recording.duration)
+            let markdown = TranscriptFormatter.markdown(transcript, title: title(for: recording),
+                                                        duration: recording.duration,
+                                                        language: Localization.shared.language)
             try markdown.write(to: markdownURL(for: url), atomically: true, encoding: .utf8)
         }
     }
 
     // MARK: - Azioni
 
-    private static let titleFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "it_IT")
-        formatter.dateFormat = "EEEE d MMMM, HH:mm"
-        return formatter
-    }()
-
     func title(for recording: Recording) -> String {
-        "Chiamata di " + Self.titleFormatter.string(from: recording.date)
+        let formatter = DateFormatter()
+        formatter.locale = Localization.shared.locale
+        formatter.setLocalizedDateFormatFromTemplate("EEEEdMMMM HHmm")
+        return tr(.libraryCallTitle, formatter.string(from: recording.date))
     }
 
     func markdown(for recording: Recording) -> String? {
-        transcripts[recording.id].map { TranscriptFormatter.markdown($0, title: title(for: recording), duration: recording.duration) }
+        transcripts[recording.id].map {
+            TranscriptFormatter.markdown($0, title: title(for: recording), duration: recording.duration,
+                                         language: Localization.shared.language)
+        }
     }
 
     /// Sposta nel Cestino audio e trascrizione Markdown, e cancella tracce e JSON interni.

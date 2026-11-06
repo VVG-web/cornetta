@@ -63,6 +63,7 @@ namespace Cornetta.App
             Line("Log: " + AppInfo.LogPath);
             Diagnostics.Log("Selftest avviato");
 
+            CheckLocalization();
             CheckDevices();
             bool aac = CheckAac();
             string folder = Path.Combine(Path.GetTempPath(), "cornetta-selftest-" + Guid.NewGuid().ToString("N").Substring(0, 8));
@@ -245,6 +246,22 @@ namespace Cornetta.App
             double sum = 0;
             for (int i = from; i < to; i++) sum += samples[i] * samples[i];
             return (float)Math.Sqrt(sum / (to - from));
+        }
+
+        private static void CheckLocalization()
+        {
+            foreach (L10nKey key in Enum.GetValues(typeof(L10nKey)))
+            {
+                if (string.IsNullOrWhiteSpace(L10n.Text(key, AppLanguage.Italian))
+                    || string.IsNullOrWhiteSpace(L10n.Text(key, AppLanguage.English)))
+                    throw new InvalidOperationException("Traduzione mancante: " + key);
+            }
+            if (AppLanguageSettings.Resolve("en", true, "it") != AppLanguage.English
+                || AppLanguageSettings.Resolve("", true, "en") != AppLanguage.Italian
+                || AppLanguageSettings.Resolve("", false, "en") != AppLanguage.English
+                || AppLanguageSettings.Resolve("", false, "de") != AppLanguage.Italian)
+                throw new InvalidOperationException("Scelta della lingua non valida");
+            Line("Lingue: italiano e inglese complete");
         }
 
         private static void Line(string text)

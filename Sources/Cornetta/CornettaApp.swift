@@ -7,10 +7,12 @@ struct CornettaApp: App {
     @StateObject private var model = RecorderModel.shared
     @StateObject private var updates = UpdateManager.shared
     @StateObject private var screen = ScreenRecordingModel.shared
+    @StateObject private var localization = Localization.shared
 
     var body: some Scene {
         MenuBarExtra {
             MenuContent(model: model, updates: updates, screen: screen)
+                .localizedRoot()
         } label: {
             if model.isRecording {
                 Image(nsImage: Self.recordingIcon)
@@ -28,8 +30,15 @@ struct CornettaApp: App {
     }
 
     /// Pallino rosso non template: il rosso resta visibile nella barra dei menu.
-    private static let recordingIcon = coloredSymbol("record.circle.fill", .systemRed, "In registrazione")
-    private static let updateBadge = coloredSymbol("arrow.down.circle.fill", .systemBlue, "Aggiornamento disponibile")
+    @MainActor
+    private static var recordingIcon: NSImage {
+        coloredSymbol("record.circle.fill", .systemRed, tr(.accessibilityRecording))
+    }
+
+    @MainActor
+    private static var updateBadge: NSImage {
+        coloredSymbol("arrow.down.circle.fill", .systemBlue, tr(.accessibilityUpdateAvailable))
+    }
 
     private static func coloredSymbol(_ name: String, _ color: NSColor, _ label: String) -> NSImage {
         let config = NSImage.SymbolConfiguration(paletteColors: [color])
@@ -43,31 +52,33 @@ struct MenuContent: View {
     @ObservedObject var model: RecorderModel
     @ObservedObject var updates: UpdateManager
     @ObservedObject var screen: ScreenRecordingModel
+    @ObservedObject private var localization = Localization.shared
 
     var body: some View {
         // In registrazione niente installazione: il riavvio taglierebbe la chiamata o il video.
         if let version = updates.availableVersion, !model.isRecording, !screen.isRecording {
-            Button("Installa l'aggiornamento a Cornetta \(version)…") { updates.installOrCheck() }
+            Button(localization.format(.menuUpdateInstall, version)) { updates.installOrCheck() }
             Divider()
         }
-        Button(model.isRecording ? "Ferma registrazione" : "Avvia registrazione") { model.toggle() }
+        Button(localization.text(model.isRecording ? .menuRecordStop : .menuRecordStart)) { model.toggle() }
             .keyboardShortcut("r")
         if model.isRecording {
-            Text("In registrazione · \(model.elapsedText)")
-            Text("Microfono: \(model.microphoneName ?? "nessuno")")
+            Text(localization.format(.menuRecordStatus, model.elapsedText))
+            Text(localization.format(.menuMicrophone,
+                                     model.microphoneName ?? localization.text(.commonNone)))
         }
         if let message = model.message {
             Text(message)
         }
-        if model.message?.hasPrefix("Microfono non autorizzato") == true {
-            Button("Apri le impostazioni del microfono…") { model.openMicrophoneSettings() }
+        if model.microphoneDenied {
+            Button(localization.text(.menuMicrophoneSettings)) { model.openMicrophoneSettings() }
         }
-        Button(screen.isRecording ? "Ferma il video dello schermo" : "Registra lo schermo…") { screen.toggle() }
+        Button(localization.text(screen.isRecording ? .menuScreenStop : .menuScreenStart)) { screen.toggle() }
             .disabled(screen.isPicking)
         if screen.isRecording {
-            Text("Video dello schermo · \(screen.elapsedText)")
+            Text(localization.format(.menuScreenStatus, screen.elapsedText))
             if screen.withoutMicrophone {
-                Text("Senza microfono: serve macOS 15")
+                Text(localization.text(.menuScreenWithoutMicrophone))
             }
         }
         Divider()
@@ -96,7 +107,14 @@ struct MenuContent: View {
         Toggle("Apri all'accensione del Mac", isOn: Binding(get: { LaunchAtLogin.isEnabled }, set: { LaunchAtLogin.set($0) }))
         Button("Controlla aggiornamenti…") { updates.installOrCheck() }
         Divider()
-        Text("Cornetta \(AppInfo.version)")
+        Text(verbatim: "Cornetta \(AppInfo.version)")
+        Picker(localization.text(.menuLanguage),
+               selection: Binding(get: { localization.language }, set: { localization.select($0) })) {
+            ForEach(AppLanguage.allCases, id: \.self) { language in
+                Text(localization.text(language.nameKey)).tag(language)
+            }
+        }
+        Divider()
         // Ferma e salva lo fa applicationShouldTerminate, senza convertire: la conversione la uccide l'uscita.
         Button("Esci da Cornetta") { NSApp.terminate(nil) }
         .keyboardShortcut("q")

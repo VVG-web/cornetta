@@ -45,6 +45,7 @@ namespace Cornetta.App
 
         private OverlayForm? overlay;
         private NoticeForm? notice;
+        private Func<NoticeForm>? noticeFactory;
         private Timer? noticeTimeout;
         private FeedbackForm? feedback;
         private string? pendingUpdateNotice;
@@ -66,6 +67,7 @@ namespace Cornetta.App
             callTimer.Start();
             updateTimer.Tick += async (_, __) => await CheckUpdates(manual: false);
             updateTimer.Start();
+            AppLanguageSettings.LanguageChanged += RelayToOpenWindows;
             // Spegnimento, disconnessione e sospensione: il file va chiuso prima, o resta illeggibile.
             SystemEvents.SessionEnding += OnSessionEnding;
             SystemEvents.PowerModeChanged += OnPowerModeChanged;
@@ -77,8 +79,8 @@ namespace Cornetta.App
 
             if (firstRun)
             {
-                tray.ShowBalloonTip(10_000, "Cornetta è pronta",
-                    "La trovi qui, nell'area di notifica vicino all'orologio. Un clic sull'icona apre il menu.", ToolTipIcon.Info);
+                tray.ShowBalloonTip(10_000, L10n.Text(L10nKey.WindowsTrayReadyTitle),
+                    L10n.Text(L10nKey.WindowsTrayReadyMessage), ToolTipIcon.Info);
             }
             RecoverInterruptedRecordings();
         }
@@ -97,9 +99,12 @@ namespace Cornetta.App
                 if (saved.Count == 0) return;
                 string name = saved[saved.Count - 1];
                 lastFile = Path.Combine(AppInfo.RecordingsDirectory, name);
-                message = "Recuperata una registrazione interrotta: " + name;
-                tray.ShowBalloonTip(8000, "Registrazione recuperata",
-                    (saved.Count == 1 ? name : saved.Count + " registrazioni interrotte") + "\nUn clic qui per vederla nella cartella.", ToolTipIcon.Info);
+                message = L10n.Format(L10nKey.RecordingRecovered, name);
+                tray.ShowBalloonTip(8000, L10n.Text(L10nKey.WindowsTrayRecoveredTitle),
+                    saved.Count == 1
+                        ? L10n.Format(L10nKey.WindowsTrayRecoveredMessageOne, name)
+                        : L10n.Format(L10nKey.WindowsTrayRecoveredMessageMany, saved.Count),
+                    ToolTipIcon.Info);
             }
             catch (Exception ex)
             {
@@ -126,41 +131,54 @@ namespace Cornetta.App
             string? version = updates.AvailableVersion;
             if (version != null)
             {
-                Add("Installa l'aggiornamento a Cornetta " + version + "…", () => InstallUpdate());
+                Add(L10n.Format(L10nKey.MenuUpdateInstall, version), () => InstallUpdate());
                 menu.Items.Add(new ToolStripSeparator());
             }
-            var toggle = Add(IsRecording ? "Ferma registrazione" : "Avvia registrazione", Toggle);
+            var toggle = Add(L10n.Text(IsRecording ? L10nKey.MenuRecordStop : L10nKey.MenuRecordStart), Toggle);
             if (hotkey.Registered) toggle.ShortcutKeyDisplayString = "Ctrl+Alt+R";
             toggle.Enabled = !busy;
             if (IsRecording)
             {
-                Info("In registrazione · " + ElapsedText);
-                Info("Microfono: " + (microphoneName ?? "nessuno"));
+                Info(L10n.Format(L10nKey.MenuRecordStatus, ElapsedText));
+                Info(L10n.Format(L10nKey.MenuMicrophone, microphoneName ?? L10n.Text(L10nKey.CommonNone)));
             }
             if (message != null) Info(message);
             if (microphoneDenied)
             {
-                Add("Apri le impostazioni del microfono…", () => OpenSettings("ms-settings:privacy-microphone"));
+                Add(L10n.Text(L10nKey.MenuMicrophoneSettings), () => OpenSettings("ms-settings:privacy-microphone"));
             }
             menu.Items.Add(new ToolStripSeparator());
-            Add("Apri cartella registrazioni", OpenFolder);
-            if (lastFile != null) Add("Mostra l'ultima registrazione", RevealLastFile);
+            Add(L10n.Text(L10nKey.MenuRecordingsOpenFolder), OpenFolder);
+            if (lastFile != null) Add(L10n.Text(L10nKey.MenuLastRecording), RevealLastFile);
             menu.Items.Add(new ToolStripSeparator());
-            Add("Invia un feedback…", OpenFeedback);
-            var overlayItem = Add("Mostra il pannello durante la registrazione", () =>
+            Add(L10n.Text(L10nKey.MenuFeedback), OpenFeedback);
+            var overlayItem = Add(L10n.Text(L10nKey.MenuOverlay), () =>
             {
                 Settings.ShowOverlay = !Settings.ShowOverlay;
                 RefreshOverlay();
             });
             overlayItem.Checked = Settings.ShowOverlay;
-            var proposeItem = Add("Proponi di registrare quando inizia una chiamata", () => Settings.ProposeOnCall = !Settings.ProposeOnCall);
+            var proposeItem = Add(L10n.Text(L10nKey.MenuPropose), () => Settings.ProposeOnCall = !Settings.ProposeOnCall);
             proposeItem.Checked = Settings.ProposeOnCall;
-            var telemetryItem = Add("Invia dati di funzionamento", () => Telemetry.IsEnabled = !Telemetry.IsEnabled);
+            var telemetryItem = Add(L10n.Text(L10nKey.MenuTelemetry), () => Telemetry.IsEnabled = !Telemetry.IsEnabled);
             telemetryItem.Checked = Telemetry.IsEnabled;
-            Add("Controlla aggiornamenti…", async () => await CheckUpdates(manual: true));
+            Add(L10n.Text(L10nKey.MenuUpdates), async () => await CheckUpdates(manual: true));
+            var languageItem = new ToolStripMenuItem(L10n.Text(L10nKey.MenuLanguage));
+            foreach (AppLanguage language in new[] { AppLanguage.Italian, AppLanguage.English })
+            {
+                var choice = new ToolStripMenuItem(language == AppLanguage.Italian
+                    ? L10n.Text(L10nKey.MenuLanguageItalian)
+                    : L10n.Text(L10nKey.MenuLanguageEnglish))
+                {
+                    Checked = AppLanguageSettings.Current == language,
+                };
+                choice.Click += (_, __) => AppLanguageSettings.Select(language);
+                languageItem.DropDownItems.Add(choice);
+            }
+            menu.Items.Add(languageItem);
             menu.Items.Add(new ToolStripSeparator());
             Info("Cornetta " + AppInfo.Version);
-            Add("Esci da Cornetta", Quit);
+            Add(L10n.Text(L10nKey.MenuQuit), Quit);
         }
 
         private ToolStripMenuItem Add(string text, Action action)
@@ -181,12 +199,12 @@ namespace Cornetta.App
             if (IsRecording)
             {
                 tray.Icon = TrayIcons.Recording;
-                SetTrayText("Cornetta · In registrazione " + ElapsedText);
+                SetTrayText(L10n.Format(L10nKey.WindowsTrayRecordingStatus, ElapsedText));
             }
             else if (updates.AvailableVersion != null)
             {
                 tray.Icon = TrayIcons.Update;
-                SetTrayText("Cornetta · Aggiornamento disponibile");
+                SetTrayText(L10n.Text(L10nKey.WindowsTrayUpdateStatus));
             }
             else
             {
@@ -215,7 +233,7 @@ namespace Cornetta.App
             if (installing)
             {
                 // L'aggiornamento riavvia l'app: una registrazione partita adesso verrebbe troncata.
-                tray.ShowBalloonTip(5000, "Cornetta", "Sto installando l'aggiornamento: fra pochi secondi puoi registrare.", ToolTipIcon.Info);
+                tray.ShowBalloonTip(5000, "Cornetta", L10n.Text(L10nKey.WindowsTrayInstalling), ToolTipIcon.Info);
                 return;
             }
             busy = true;
@@ -238,8 +256,8 @@ namespace Cornetta.App
             catch (Exception ex)
             {
                 Telemetry.Send("registrazione", "errore", TelemetryPayload.ErrorCode(ex, "avvio"));
-                Diagnostics.Log("Avvio non riuscito: " + ex.Message);
-                message = ex is InvalidOperationException ? ex.Message : "Non riesco ad avviare la registrazione: " + ex.Message;
+                Diagnostics.Log("Avvio registrazione non riuscito: " + ex.Message);
+                message = L10n.Text(L10nKey.WindowsTrayStartError);
                 busy = false;
                 tray.ShowBalloonTip(8000, "Cornetta", message, ToolTipIcon.Warning);
                 return;
@@ -249,15 +267,15 @@ namespace Cornetta.App
             microphoneName = newRecorder.MicrophoneName;
             if (!micAllowed)
             {
-                message = "Microfono non autorizzato: registro solo l'audio della chiamata.";
+                message = L10n.Text(L10nKey.RecordingMicrophoneDenied);
             }
             else if (newRecorder.MicrophoneName == null)
             {
-                message = "Nessun microfono trovato: registro solo l'audio della chiamata.";
+                message = L10n.Text(L10nKey.WindowsTrayNoMicrophone);
             }
             else if (newRecorder.OutputName == null)
             {
-                message = "Nessuna uscita audio trovata: registro solo il microfono.";
+                message = L10n.Text(L10nKey.WindowsTrayNoOutput);
             }
             startedAt = DateTime.UtcNow;
             callEndedSuggestion = false;
@@ -297,7 +315,7 @@ namespace Cornetta.App
                 busy = false;
             }
             Finish();
-            message = "Salvo " + Path.GetFileName(current.OutputPath) + "…";
+            message = L10n.Format(L10nKey.WindowsTraySaving, Path.GetFileName(current.OutputPath));
             // File.Exists fuori dal thread dell'interfaccia: la cartella può stare su un disco di rete o su OneDrive.
             var save = Task.Run(() => current.SaveRecording());
             saving = save;
@@ -320,13 +338,15 @@ namespace Cornetta.App
             if (IsRecording || busy) return;
             if (saved)
             {
-                message = "Salvata: " + Path.GetFileName(current.OutputPath);
-                tray.ShowBalloonTip(6000, "Registrazione salvata", Path.GetFileName(current.OutputPath) + "\nUn clic qui per vederla nella cartella.", ToolTipIcon.Info);
+                message = L10n.Format(L10nKey.RecordingSaved, Path.GetFileName(current.OutputPath));
+                tray.ShowBalloonTip(6000, L10n.Text(L10nKey.WindowsTraySavedTitle),
+                    L10n.Format(L10nKey.WindowsTraySavedMessage, Path.GetFileName(current.OutputPath)),
+                    ToolTipIcon.Info);
             }
             else
             {
-                message = NotSavedMessage;
-                tray.ShowBalloonTip(8000, "Cornetta", NotSavedMessage, ToolTipIcon.Warning);
+                message = L10n.Text(L10nKey.WindowsTrayNotSaved);
+                tray.ShowBalloonTip(8000, "Cornetta", L10n.Text(L10nKey.WindowsTrayNotSaved), ToolTipIcon.Warning);
             }
             if (pendingUpdateNotice != null)
             {
@@ -451,10 +471,10 @@ namespace Cornetta.App
         private void ShowCallNotice(string appName)
         {
             Diagnostics.Log("Chiamata rilevata: " + appName);
-            ShowNotice(new NoticeForm("call", "", Theme.Red,
-                "Chiamata in corso su " + appName,
-                "Vuoi registrarla? Registro la tua voce e quella delle altre persone in un file.",
-                "Registra", "Non ora",
+            ShowLocalizedNotice(() => new NoticeForm("call", "", Theme.Red,
+                L10n.Format(L10nKey.NoticeCallTitle, appName),
+                L10n.Text(L10nKey.NoticeCallMessage),
+                L10n.Text(L10nKey.NoticeRecord), L10n.Text(L10nKey.NoticeNotNow),
                 () => { CloseNotice(); _ = Start(); },
                 CloseNotice));
             // Se nessuno risponde, l'avviso sparisce da solo dopo 30 secondi.
@@ -465,10 +485,10 @@ namespace Cornetta.App
 
         private void ShowCallEndedNotice()
         {
-            ShowNotice(new NoticeForm("ended", "", Theme.Orange,
-                "La chiamata sembra finita",
-                "Cornetta sta ancora registrando.",
-                "Ferma e salva", "Continua",
+            ShowLocalizedNotice(() => new NoticeForm("ended", "", Theme.Orange,
+                L10n.Text(L10nKey.NoticeCallEndedTitle),
+                L10n.Text(L10nKey.NoticeCallEndedMessage),
+                L10n.Text(L10nKey.NoticeStopAndSave), L10n.Text(L10nKey.CommonContinue),
                 () => { CloseNotice(); _ = Stop(); },
                 () => { CloseNotice(); DismissCallEnded(); }));
         }
@@ -476,10 +496,11 @@ namespace Cornetta.App
         private void ShowOthersMutedNotice(string? outputs)
         {
             SystemSounds.Exclamation.Play();
-            ShowNotice(new NoticeForm("silence", "\uE7BA", Theme.Orange,
-                "Non sento la voce degli altri",
-                "La chiamata è in corso, ma da " + (outputs ?? "l'uscita audio") + " non arriva niente. Controlla quale uscita usa l'app della chiamata.",
-                "Apri impostazioni audio", "Chiudi",
+            ShowLocalizedNotice(() => new NoticeForm("silence", "\uE7BA", Theme.Orange,
+                L10n.Text(L10nKey.WindowsNoticeSilenceTitle),
+                L10n.Format(L10nKey.WindowsNoticeSilenceMessage,
+                    outputs ?? L10n.Text(L10nKey.WindowsNoticeSilenceOutput)),
+                L10n.Text(L10nKey.WindowsNoticeAudioSettings), L10n.Text(L10nKey.CommonClose),
                 () => { CloseNotice(); OpenSettings("ms-settings:sound"); },
                 CloseNotice));
         }
@@ -498,13 +519,14 @@ namespace Cornetta.App
                     AnnounceUpdate(updates.AvailableVersion!);
                     break;
                 case UpdateCheck.UpToDate when manual:
-                    tray.ShowBalloonTip(5000, "Cornetta", "Hai già la versione più recente (" + AppInfo.Version + ").", ToolTipIcon.Info);
+                tray.ShowBalloonTip(5000, "Cornetta",
+                    L10n.Format(L10nKey.WindowsTrayUpToDate, AppInfo.Version), ToolTipIcon.Info);
                     break;
                 case UpdateCheck.NotInstalled when manual:
-                    tray.ShowBalloonTip(5000, "Cornetta", "Gli aggiornamenti funzionano solo nella versione installata con CornettaSetup.exe.", ToolTipIcon.Info);
+                tray.ShowBalloonTip(5000, "Cornetta", L10n.Text(L10nKey.WindowsTrayInstalledOnly), ToolTipIcon.Info);
                     break;
                 case UpdateCheck.Failed when manual:
-                    tray.ShowBalloonTip(5000, "Cornetta", "Non riesco a controllare gli aggiornamenti. Controlla la connessione e riprova.", ToolTipIcon.Warning);
+                tray.ShowBalloonTip(5000, "Cornetta", L10n.Text(L10nKey.WindowsTrayUpdateCheckFailed), ToolTipIcon.Warning);
                     break;
             }
         }
@@ -518,10 +540,10 @@ namespace Cornetta.App
                 return;
             }
             if (notice?.Kind == "update" || installing) return;
-            ShowNotice(new NoticeForm("update", "", Theme.Blue,
-                "Aggiornamento disponibile",
-                "È pronta Cornetta " + version + ". L'installazione richiede pochi secondi e l'app si riapre da sola.",
-                "Aggiorna ora", "Più tardi",
+            ShowLocalizedNotice(() => new NoticeForm("update", "", Theme.Blue,
+                L10n.Text(L10nKey.NoticeUpdateTitle),
+                L10n.Format(L10nKey.NoticeUpdateMessage, version),
+                L10n.Text(L10nKey.NoticeUpdateNow), L10n.Text(L10nKey.NoticeUpdateLater),
                 () => { CloseNotice(); InstallUpdate(); },
                 CloseNotice));
             SystemSounds.Asterisk.Play();
@@ -534,24 +556,25 @@ namespace Cornetta.App
             {
                 // Non si interrompe una chiamata: l'avviso torna appena la registrazione finisce.
                 pendingUpdateNotice = updates.AvailableVersion;
-                tray.ShowBalloonTip(5000, "Cornetta", "L'aggiornamento parte quando fermi la registrazione.", ToolTipIcon.Info);
+                tray.ShowBalloonTip(5000, "Cornetta", L10n.Text(L10nKey.WindowsTrayUpdateWaiting), ToolTipIcon.Info);
                 return;
             }
             installing = true;
-            SetTrayText("Cornetta · Scarico l'aggiornamento…");
+                SetTrayText(L10n.Text(L10nKey.WindowsTrayUpdateDownloading));
             try
             {
                 // L'aggiornamento riavvia l'app: la conversione appena partita finisce prima.
                 if (saving != null) await saving;
                 await updates.InstallAsync(
-                    percent => invoker.BeginInvoke(new Action(() => SetTrayText("Cornetta · Aggiornamento " + percent + "%"))),
+                    percent => invoker.BeginInvoke(new Action(() =>
+                        SetTrayText(L10n.Format(L10nKey.WindowsTrayUpdateProgress, percent)))),
                     () => { tray.Visible = false; });
             }
             catch (Exception ex)
             {
                 Diagnostics.Log("Aggiornamento non riuscito: " + ex.Message);
                 tray.Visible = true;
-                tray.ShowBalloonTip(8000, "Cornetta", "L'aggiornamento non è riuscito. Riprova più tardi.", ToolTipIcon.Warning);
+                tray.ShowBalloonTip(8000, "Cornetta", L10n.Text(L10nKey.WindowsTrayUpdateFailed), ToolTipIcon.Warning);
             }
             installing = false;
             UpdateTrayIcon();
@@ -566,6 +589,12 @@ namespace Cornetta.App
             notice.ShowPanel();
         }
 
+        private void ShowLocalizedNotice(Func<NoticeForm> factory)
+        {
+            ShowNotice(factory());
+            noticeFactory = factory;
+        }
+
         private void CloseNotice()
         {
             noticeTimeout?.Stop();
@@ -577,6 +606,7 @@ namespace Cornetta.App
                 notice.Dispose();
                 notice = null;
             }
+            noticeFactory = null;
         }
 
         // MARK: - Feedback
@@ -654,11 +684,11 @@ namespace Cornetta.App
         }
 
         private void OnSessionEnding(object sender, SessionEndingEventArgs e) =>
-            StopForSystem("Registrazione fermata: Windows si sta spegnendo.");
+            StopForSystem(L10n.Text(L10nKey.WindowsTrayShutdownStop));
 
         private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
         {
-            if (e.Mode == PowerModes.Suspend) StopForSystem("Registrazione fermata: il PC è andato in sospensione.");
+            if (e.Mode == PowerModes.Suspend) StopForSystem(L10n.Text(L10nKey.WindowsTraySleepStop));
         }
 
         /// <summary>
@@ -691,11 +721,23 @@ namespace Cornetta.App
                 if (lastFile != pending) return;
                 if (t.Status == TaskStatus.RanToCompletion && t.Result) { lastFile = current.OutputPath; return; }
                 lastFile = null;
-                if (message == reason) message = NotSavedMessage;
+                if (message == reason) message = L10n.Text(L10nKey.WindowsTrayNotSaved);
             }));
         }
 
-        private const string NotSavedMessage = "Registrazione non salvata: la recupero al prossimo avvio.";
+        private void RelayToOpenWindows()
+        {
+            message = null;
+            overlay?.Relocalize();
+            if (notice != null && noticeFactory != null)
+            {
+                var factory = noticeFactory;
+                CloseNotice();
+                ShowNotice(factory());
+                noticeFactory = factory;
+            }
+            UpdateTrayIcon();
+        }
 
         private void OnUi(Action action)
         {

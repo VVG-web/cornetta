@@ -40,7 +40,7 @@ final class ScreenRecordingModel: NSObject, ObservableObject {
             MainActor.assumeIsolated {
                 guard self?.isRecording == true else { return }
                 Diagnostics.log("Il Mac va in stop durante un video: lo fermo e lo salvo")
-                self?.stop(reason: "Il Mac è andato in stop durante il video. Quello che era registrato è salvato.")
+                self?.stop(reason: tr(.screenReasonSleep))
             }
         }
     }
@@ -91,7 +91,8 @@ final class ScreenRecordingModel: NSObject, ObservableObject {
                 guard let self, self.recorder === recorder else { return }
                 switch event {
                 case .stopped(let text):
-                    self.stop(reason: text.map { "La registrazione si è interrotta: \($0)." })
+                    if let text { Diagnostics.log("Schermo interrotto: \(text)") }
+                    self.stop(reason: tr(.screenReasonInterrupted))
                 }
             }
         }
@@ -101,8 +102,8 @@ final class ScreenRecordingModel: NSObject, ObservableObject {
             Diagnostics.log("Schermo: avvio non riuscito: \(error.localizedDescription)")
             endPicker()
             RecorderModel.shared.showError(
-                title: "Non riesco a registrare lo schermo",
-                message: error.localizedDescription.trimmingCharacters(in: CharacterSet(charactersIn: ".")) + ". Controlla in Impostazioni › Privacy e sicurezza › Registrazione schermo e audio di sistema che Cornetta sia attiva.")
+                title: .screenErrorStartTitle,
+                message: .screenErrorStartMessage)
             onHeadlessSaved?(.failure(error))
             return
         }
@@ -156,17 +157,17 @@ final class ScreenRecordingModel: NSObject, ObservableObject {
             Diagnostics.log(String(format: "Schermo: salvato %@, %.1f s, %lld byte", saved.url.lastPathComponent, saved.seconds, saved.bytes))
             lastVideo = saved.url
             let size = ByteCountFormatter.string(fromByteCount: saved.bytes, countStyle: .file)
-            RecorderModel.shared.showNotice(kind: "screen", NoticeView(
+            RecorderModel.shared.showNotice(kind: "screen") { NoticeView(
                 icon: "checkmark.circle.fill", tint: .green,
-                title: "Video salvato · \(size)",
-                message: (reason.map { $0 + " " } ?? "") + "\(saved.url.lastPathComponent), in Filmati › Cornetta.",
-                primary: "Mostra nel Finder", secondary: "Chiudi",
+                title: tr(.screenSavedTitle, size),
+                message: [reason, tr(.screenSavedMessage, saved.url.lastPathComponent)]
+                    .compactMap { $0 }.joined(separator: " "),
+                primary: tr(.commonShowInFinder), secondary: tr(.commonClose),
                 onPrimary: { RecorderModel.shared.closeNotice(); NSWorkspace.shared.activateFileViewerSelecting([saved.url]) },
-                onSecondary: { RecorderModel.shared.closeNotice() }))
+                onSecondary: { RecorderModel.shared.closeNotice() }) }
         case .failure(let error):
             Diagnostics.log("Schermo: salvataggio non riuscito: \(error.localizedDescription)")
-            RecorderModel.shared.showError(title: "Video non salvato",
-                                           message: (reason.map { $0 + " " } ?? "") + error.localizedDescription + ".")
+            RecorderModel.shared.showError(title: .screenFailedTitle, message: .screenFailedMessage)
         }
     }
 
@@ -200,12 +201,12 @@ final class ScreenRecordingModel: NSObject, ObservableObject {
         }
         if elapsed > 3 * 3600, !longWarned {
             longWarned = true
-            RecorderModel.shared.showNotice(kind: "screen-long", NoticeView(
-                icon: "clock.fill", tint: .orange, title: "Il video dura da 3 ore",
-                message: "Se l'hai dimenticato acceso, fermalo adesso.",
-                primary: "Ferma e salva", secondary: "Continua",
+            RecorderModel.shared.showNotice(kind: "screen-long") { NoticeView(
+                icon: "clock.fill", tint: .orange, title: tr(.screenLongTitle),
+                message: tr(.screenLongMessage),
+                primary: tr(.noticeStopAndSave), secondary: tr(.commonContinue),
                 onPrimary: { [weak self] in RecorderModel.shared.closeNotice(); self?.stop() },
-                onSecondary: { RecorderModel.shared.closeNotice() }))
+                onSecondary: { RecorderModel.shared.closeNotice() }) }
         }
         checkDiskSpace()
     }
@@ -218,15 +219,15 @@ final class ScreenRecordingModel: NSObject, ObservableObject {
         guard let free = values?.volumeAvailableCapacityForImportantUsage else { return }
         if free < 200_000_000 {
             Diagnostics.log("Schermo: spazio libero \(free / 1_000_000) MB, fermo il video")
-            stop(reason: "Sul disco restavano meno di 200 MB.")
+            stop(reason: tr(.screenDiskReason))
         } else if free < 1_000_000_000, !lowDiskWarned {
             lowDiskWarned = true
-            RecorderModel.shared.showNotice(kind: "screen-disk", NoticeView(
-                icon: "externaldrive.fill.badge.exclamationmark", tint: .orange, title: "Disco quasi pieno",
-                message: "Sul disco resta meno di 1 GB. Sotto i 200 MB Cornetta ferma e salva il video da sola.",
-                primary: "Ferma e salva", secondary: "Continua",
+            RecorderModel.shared.showNotice(kind: "screen-disk") { NoticeView(
+                icon: "externaldrive.fill.badge.exclamationmark", tint: .orange, title: tr(.screenDiskTitle),
+                message: tr(.screenDiskMessage),
+                primary: tr(.noticeStopAndSave), secondary: tr(.commonContinue),
                 onPrimary: { [weak self] in RecorderModel.shared.closeNotice(); self?.stop() },
-                onSecondary: { RecorderModel.shared.closeNotice() }))
+                onSecondary: { RecorderModel.shared.closeNotice() }) }
         }
     }
 
@@ -235,7 +236,8 @@ final class ScreenRecordingModel: NSObject, ObservableObject {
     private func refreshOverlay() {
         if isRecording && (headlessOptions?.overlay ?? showOverlay) {
             if overlayPanel == nil {
-                let panel = FloatingPanel(rootView: ScreenOverlayView(model: self), autosaveName: "CornettaScreenOverlay")
+                let panel = FloatingPanel(rootView: ScreenOverlayView(model: self).localizedRoot(),
+                                          autosaveName: "CornettaScreenOverlay")
                 // Il pannello non deve finire nel video.
                 panel.sharingType = .none
                 overlayPanel = panel
@@ -277,10 +279,9 @@ extension ScreenRecordingModel: SCContentSharingPickerObserver {
 
     nonisolated func contentSharingPickerStartDidFailWithError(_ error: Error) {
         Task { @MainActor in
-            Diagnostics.log("Schermo: selettore non aperto: \(error.localizedDescription)")
             self.endPicker()
-            RecorderModel.shared.showError(title: "Non riesco ad aprire la scelta dello schermo",
-                                           message: error.localizedDescription + ".")
+            Diagnostics.log("Schermo: selettore non aperto: \(error.localizedDescription)")
+            RecorderModel.shared.showError(title: .screenPickerErrorTitle, message: .screenPickerErrorMessage)
             self.onHeadlessSaved?(.failure(error))
         }
     }

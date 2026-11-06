@@ -56,8 +56,8 @@ Set `CORNETTA_CHROMIUM=/absolute/path/to/chromium` to override browser discovery
 ./scripts/check.sh
 ```
 
-It runs ShellCheck, SwiftLint, SwiftFormat, macOS tests, a universal DMG build that
-is mounted and inspected for both architectures, Sparkle and signature validity,
+It runs ShellCheck, the localization catalog checks, SwiftLint, SwiftFormat, macOS tests,
+a universal DMG build that is mounted and inspected for both architectures, Sparkle and signature validity,
 cross-platform .NET tests and Release compilation, Python script tests, Worker
 tests, isolated browser smoke tests (including metadata and clipboard failure paths),
 and `git diff --check`.
@@ -85,3 +85,25 @@ open -n build/Cornetta.app --args --demo-library /tmp/demo
 Run real recording tests only with permission to capture the selected audio and screen.
 Windows changes also require the existing Windows CI and preferably a real Windows
 10/11 machine for `--selftest`, `--render-ui`, `--smoke-tray`, and a real recording.
+
+## Interface localization
+
+The single source of truth is `localization/strings.json`. Each entry has an identifier and both
+Italian and English text. Run:
+
+```bash
+scripts/localization.py          # regenerate Swift, C# and .lproj catalogs
+scripts/localization.py --check  # fail if generated files are stale
+```
+
+Generated files are committed: `LocalizedStrings.generated.swift`,
+`LocalizedStrings.generated.cs`, and the `Localizable.strings` files under
+`Sources/Cornetta/Resources/`. Never edit generated files directly.
+
+The automated tests reject missing translations, mismatched placeholders, and UI literals that are
+not represented in the catalog. A new interface string therefore requires an Italian and an English
+entry before the gate can pass.
+
+The saved key is `appLanguage` (`it` or `en`). New installs choose English when the first supported
+system language is English and Italian otherwise. Existing installs remain Italian until the user
+chooses another language. This choice is independent from the speech-recognition language.

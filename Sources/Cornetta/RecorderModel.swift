@@ -10,6 +10,7 @@ final class RecorderModel: ObservableObject {
     @Published private(set) var elapsed: TimeInterval = 0
     @Published private(set) var microphoneName: String?
     @Published private(set) var message: String?
+    @Published private(set) var microphoneDenied = false
     @Published private(set) var lastFile: URL?
     @Published private(set) var micLevel: Float = 0
     @Published private(set) var systemLevel: Float = 0
@@ -51,8 +52,10 @@ final class RecorderModel: ObservableObject {
     // Pannelli
     private var overlayPanel: FloatingPanel?
     private var noticePanel: FloatingPanel?
+    private var noticeBuilder: (() -> AnyView)?
     private var noticeKind: String?
     private var feedbackWindow: NSWindow?
+    private var feedbackLanguageObserver: NSObjectProtocol?
     private var pendingUpdateNotice: String?
     private var pendingRecoveryFailures: [URL] = []
     private var pendingTranscripts: [Library.Recording] = []
@@ -80,6 +83,14 @@ final class RecorderModel: ObservableObject {
         }
         Library.shared.onTranscriptReady = { [weak self] recording in
             self?.announceTranscript(recording)
+        }
+        _ = NotificationCenter.default.addObserver(
+            forName: .cornettaLanguageChanged, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.message = nil
+                self?.refreshNoticeLanguage()
+            }
         }
     }
 
@@ -118,11 +129,12 @@ final class RecorderModel: ObservableObject {
             case .success(let saved):
                 Telemetry.send(.registrazione, outcome: "ok", seconds: saved.seconds)
                 self?.lastFile = saved.recording
-                self?.message = "Salvata: \(saved.recording.lastPathComponent)"
+                self?.message = tr(.recordingSaved, saved.recording.lastPathComponent)
                 Library.shared.recordingFinished(saved.recording)
             case .failure(let error):
                 Telemetry.send(.registrazione, outcome: "errore", code: TelemetryFields.errorCode(error, prefix: "salvataggio"))
-                self?.message = "Salvataggio non riuscito: \(error.localizedDescription). L'audio resta al sicuro e viene recuperato al prossimo avvio."
+                Diagnostics.log("Salvataggio non riuscito: \(error.localizedDescription)")
+                self?.message = tr(.recordingSaveFailed)
             }
             if let reason = self?.stopReasons.removeValue(forKey: url) {
                 let converted: Bool
@@ -135,19 +147,20 @@ final class RecorderModel: ObservableObject {
             try recorder.start(useMicrophone: micAllowed)
         } catch {
             Telemetry.send(.registrazione, outcome: "errore", code: TelemetryFields.errorCode(error, prefix: "avvio"))
-            message = error.localizedDescription
+            Diagnostics.log("Avvio registrazione non riuscito: \(error.localizedDescription)")
+            message = tr(.recordingErrorTitle)
             // Il menu è chiuso: senza avviso chi ha premuto «Registra» crede che Cornetta registri.
-            showError(title: "Non riesco a registrare",
-                      message: error.localizedDescription.trimmingCharacters(in: CharacterSet(charactersIn: ".")) + ". Controlla in Impostazioni › Privacy e sicurezza che Cornetta possa usare microfono e audio di sistema.")
+            showError(title: .recordingErrorTitle, message: .recordingErrorMessage)
             return
         }
         self.recorder = recorder
         unsaved.insert(url)
         microphoneName = recorder.microphoneName
-        if !micAllowed {
-            message = "Microfono non autorizzato: registro solo l'audio della chiamata."
+        microphoneDenied = !micAllowed
+        if microphoneDenied {
+            message = tr(.recordingMicrophoneDenied)
         } else if recorder.microphoneName == nil {
-            message = "Nessun microfono trovato: registro solo l'audio della chiamata."
+            message = tr(.recordingNoMicrophone)
         }
         isRecording = true
         // Avviata da menu o ⌘R: allo stop la chiamata in corso non va riproposta, solo una nuova.
@@ -178,7 +191,7 @@ final class RecorderModel: ObservableObject {
                                stats.seconds, Date().timeIntervalSince(startedAt ?? Date()), recorder.restartCount,
                                recorder.zeroResets, recorder.meter.micGain))
         finish()
-        message = "Salvo la registrazione…"
+        message = tr(.recordingSaving)
     }
 
     /// All'uscita dall'app: chiude i file senza convertire. Il prossimo avvio recupera la registrazione.
@@ -201,28 +214,28 @@ final class RecorderModel: ObservableObject {
     /// Avviso dello stop automatico, che resta finché non si chiude.
     private func showStoppedNotice(_ reason: String, converted: Bool) {
         if converted {
-            showNotice(kind: "stopped", NoticeView(
+            showNotice(kind: "stopped") { NoticeView(
                 icon: "stop.circle.fill", tint: .orange,
-                title: "Registrazione fermata e salvata",
+                title: tr(.noticeStoppedTitle),
                 message: reason,
-                primary: "Apri", secondary: "Chiudi",
+                primary: tr(.commonOpen), secondary: tr(.commonClose),
                 onPrimary: { [weak self] in self?.closeNotice(); LibraryWindow.show() },
-                onSecondary: { [weak self] in self?.closeNotice() }))
+                onSecondary: { [weak self] in self?.closeNotice() }) }
         } else {
-            showNotice(kind: "stopped", NoticeView(
+            showNotice(kind: "stopped") { NoticeView(
                 icon: "exclamationmark.triangle.fill", tint: .orange,
-                title: "Registrazione fermata, non ancora salvata",
-                message: reason + " La conversione non è riuscita, ma l'audio è al sicuro: Cornetta lo recupera al prossimo avvio. Se il disco è pieno, prima libera spazio.",
-                primary: "Chiudi", secondary: "Invia un feedback",
+                title: tr(.noticeStoppedUnconvertedTitle),
+                message: tr(.noticeStoppedUnconvertedMessage, reason),
+                primary: tr(.commonClose), secondary: tr(.noticeFeedback),
                 onPrimary: { [weak self] in self?.closeNotice() },
-                onSecondary: { [weak self] in self?.closeNotice(); self?.openFeedback() }))
+                onSecondary: { [weak self] in self?.closeNotice(); self?.openFeedback() }) }
         }
     }
 
     private func stopForSleep() {
         guard recorder != nil else { return }
         Diagnostics.log("Il Mac va in stop durante una registrazione: la fermo e la salvo")
-        stopAndTell("Il Mac è andato in stop durante la registrazione. Quello che era registrato è salvato.")
+        stopAndTell(tr(.recordingReasonSleep))
     }
 
     var hasUnsavedWork: Bool { !unsaved.isEmpty }
@@ -248,25 +261,25 @@ final class RecorderModel: ObservableObject {
     }
 
     func noteRecovered(_ name: String) {
-        message = "Recuperata una registrazione interrotta: \(name)"
+        message = tr(.recordingRecovered, name)
     }
 
     /// Recupero abbandonato dopo tre tentativi: l'audio grezzo è in ~/Music/Cornetta. L'avviso aspetta
     /// come gli altri rimandati: mai in chiamata.
     func noteRecoveryFailed(_ folder: URL) {
-        message = "Registrazione interrotta non recuperata: l'audio è in Musica › Cornetta › \(folder.lastPathComponent)"
+        message = tr(.recordingRecoveryFailed, folder.lastPathComponent)
         pendingRecoveryFailures.append(folder)
         showPendingNotices()
     }
 
     private func showRecoveryFailedNotice(_ folder: URL) {
-        showNotice(kind: "recovery", NoticeView(
+        showNotice(kind: "recovery") { NoticeView(
             icon: "exclamationmark.triangle.fill", tint: .orange,
-            title: "Registrazione non recuperata",
-            message: "Cornetta non riesce a convertire una registrazione interrotta. L'audio grezzo è in Musica › Cornetta › \(folder.lastPathComponent) e si apre con QuickTime.",
-            primary: "Mostra nel Finder", secondary: "Chiudi",
+            title: tr(.noticeRecoveryTitle),
+            message: tr(.noticeRecoveryMessage, folder.lastPathComponent),
+            primary: tr(.commonShowInFinder), secondary: tr(.commonClose),
             onPrimary: { [weak self] in self?.closeNotice(); NSWorkspace.shared.activateFileViewerSelecting([folder]) },
-            onSecondary: { [weak self] in self?.closeNotice() }))
+            onSecondary: { [weak self] in self?.closeNotice() }) }
         requeueNotice = { [weak self] in self?.pendingRecoveryFailures.insert(folder, at: 0) }
     }
 
@@ -295,13 +308,11 @@ final class RecorderModel: ObservableObject {
         if !noAudioWarned, elapsed > 8, recorder.callbackCount == 0 || recorder.restartCount >= 3 {
             noAudioWarned = true
             Diagnostics.log("Avviso: nessun audio in arrivo")
-            showError(title: "Cornetta non riceve audio",
-                      message: "macOS non sta passando l'audio a Cornetta. Controlla in Impostazioni › Privacy e sicurezza che Cornetta possa usare microfono e audio di sistema.")
+            showError(title: .errorNoAudioTitle, message: .errorNoAudioMessage)
         } else if !noAudioWarned, !noOthersWarned, elapsed > 25, systemPeak == 0, !callAppsSeen.isEmpty {
             noOthersWarned = true
             Diagnostics.log("Avviso: audio di sistema muto durante una chiamata")
-            showError(title: "Non sento la voce degli altri",
-                      message: "La chiamata è in corso ma l'audio di sistema è muto. Controlla in Impostazioni › Privacy e sicurezza › Registrazione schermo e audio di sistema che Cornetta sia attiva.")
+            showError(title: .errorOthersSilentTitle, message: .errorOthersSilentMessage)
         }
     }
 
@@ -314,8 +325,8 @@ final class RecorderModel: ObservableObject {
         othersWarnedAt = Date()
         Diagnostics.log("Avviso: voce degli altri sparita a metà chiamata")
         showStopOffer(kind: "others", icon: "speaker.slash.fill",
-                      title: "Non sento più la voce degli altri",
-                      message: "Da più di un minuto l'audio della chiamata è muto, anche dopo che Cornetta ha riprovato a prendere la voce degli altri. Se stanno parlando, ferma e riavvia la registrazione.")
+                      title: .noticeOthersStoppedTitle,
+                      message: .noticeOthersStoppedMessage)
     }
 
     /// Registrazione dimenticata: la chiamata è finita da 10 minuti e da 10 minuti non si sente niente
@@ -327,14 +338,14 @@ final class RecorderModel: ObservableObject {
            now.timeIntervalSince(lastCall) >= Self.forgottenAfter,
            now.timeIntervalSince(lastSoundAt ?? now) >= Self.forgottenAfter {
             Diagnostics.log("Chiamata finita da 10 minuti e nessun suono: fermo e salvo la registrazione")
-            stopAndTell("La chiamata era finita da 10 minuti e non si sentiva più nessuno.")
+            stopAndTell(tr(.recordingReasonCallEnded))
             return false
         }
         if !longRecordingWarned, elapsed >= Self.longRecording, callAppsSeen.isEmpty {
             longRecordingWarned = true
             Diagnostics.log("Avviso: registrazione aperta da 3 ore senza app di chiamata")
-            showStopOffer(kind: "long", icon: "clock.fill", title: "Cornetta registra da 3 ore",
-                          message: "Nessuna app di chiamata è attiva. Se hai finito, ferma e salva la registrazione.")
+            showStopOffer(kind: "long", icon: "clock.fill", title: .noticeLongTitle,
+                          message: .noticeLongMessage)
         }
         return true
     }
@@ -349,25 +360,25 @@ final class RecorderModel: ObservableObject {
         guard let free = values?.volumeAvailableCapacityForImportantUsage else { return }
         if free < Self.diskStopBytes {
             Diagnostics.log("Spazio libero \(free / 1_000_000) MB: fermo e salvo la registrazione")
-            stopAndTell("Sul disco restano meno di 200 MB. Libera spazio prima di registrare di nuovo.")
+            stopAndTell(tr(.recordingReasonDiskLow))
         } else if free < Self.diskWarnBytes, !lowDiskWarned {
             lowDiskWarned = true
             Diagnostics.log("Avviso: spazio libero \(free / 1_000_000) MB")
-            showStopOffer(kind: "disk", icon: "externaldrive.fill.badge.exclamationmark", title: "Disco quasi pieno",
-                          message: "Sul disco resta meno di 1 GB. Sotto i 200 MB Cornetta ferma e salva la registrazione da sola.")
+            showStopOffer(kind: "disk", icon: "externaldrive.fill.badge.exclamationmark",
+                          title: .noticeDiskTitle, message: .noticeDiskMessage)
         }
     }
 
-    func showError(title: String, message: String) {
+    func showError(title: L10nKey, message: L10nKey) {
         NSSound(named: "Basso")?.play()
-        showNotice(kind: "error", NoticeView(
-            icon: "exclamationmark.triangle.fill", tint: .orange, title: title, message: message,
-            primary: "Apri Impostazioni", secondary: "Chiudi",
+        showNotice(kind: "error") { NoticeView(
+            icon: "exclamationmark.triangle.fill", tint: .orange, title: tr(title), message: tr(message),
+            primary: tr(.noticeErrorPrimary), secondary: tr(.commonClose),
             onPrimary: { [weak self] in
                 self?.closeNotice()
                 if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy") { NSWorkspace.shared.open(url) }
             },
-            onSecondary: { [weak self] in self?.closeNotice() }))
+            onSecondary: { [weak self] in self?.closeNotice() }) }
     }
 
     private func handle(_ event: CallRecorder.Event) {
@@ -377,8 +388,9 @@ final class RecorderModel: ObservableObject {
         case .failure(let text):
             Telemetry.send(.registrazione, outcome: "errore", code: "interrotta", seconds: Date().timeIntervalSince(startedAt ?? Date()))
             finish()
-            message = text
-            showError(title: "Registrazione interrotta", message: text + " Quello che era già registrato viene salvato.")
+            Diagnostics.log("Registrazione interrotta: \(text)")
+            message = tr(.errorInterruptedTitle)
+            showError(title: .errorInterruptedTitle, message: .errorInterruptedMessage)
         case .othersSilent:
             showOthersSilent()
         case .othersBack:
@@ -404,7 +416,8 @@ final class RecorderModel: ObservableObject {
     private func refreshOverlay() {
         if isRecording && showOverlay {
             if overlayPanel == nil {
-                overlayPanel = FloatingPanel(rootView: RecordingOverlayView(model: self), autosaveName: "CornettaOverlay")
+                overlayPanel = FloatingPanel(rootView: RecordingOverlayView(model: self).localizedRoot(),
+                                             autosaveName: "CornettaOverlay")
             }
             overlayPanel?.show()
         } else {
@@ -454,13 +467,13 @@ final class RecorderModel: ObservableObject {
 
     private func showCallNotice(appName: String) {
         Diagnostics.log("Chiamata rilevata: \(appName)")
-        showNotice(kind: "call", NoticeView(
+        showNotice(kind: "call") { NoticeView(
             icon: "phone.fill", tint: .red,
-            title: "Chiamata in corso su \(appName)",
-            message: "Vuoi registrarla? Registro la tua voce e quella delle altre persone in un file.",
-            primary: "Registra", secondary: "Non ora",
+            title: tr(.noticeCallTitle, appName),
+            message: tr(.noticeCallMessage),
+            primary: tr(.noticeRecord), secondary: tr(.noticeNotNow),
             onPrimary: { [weak self] in self?.closeNotice(); Task { await self?.start() } },
-            onSecondary: { [weak self] in self?.closeNotice() }))
+            onSecondary: { [weak self] in self?.closeNotice() }) }
         // Se nessuno risponde, l'avviso sparisce da solo dopo 30 secondi.
         DispatchQueue.main.asyncAfter(deadline: .now() + 30) { [weak self] in
             if self?.noticeKind == "call" { self?.closeNotice() }
@@ -468,17 +481,18 @@ final class RecorderModel: ObservableObject {
     }
 
     private func showCallEndedNotice() {
-        showStopOffer(kind: "ended", icon: "phone.down.fill", title: "La chiamata sembra finita",
-                      message: "Cornetta sta ancora registrando.") { [weak self] in self?.dismissCallEnded() }
+        showStopOffer(kind: "ended", icon: "phone.down.fill", title: .noticeCallEndedTitle,
+                      message: .noticeCallEndedMessage) { [weak self] in self?.dismissCallEnded() }
     }
 
     /// Avviso durante la registrazione con «Ferma e salva» e «Continua».
-    private func showStopOffer(kind: String, icon: String, title: String, message: String, onContinue: (() -> Void)? = nil) {
-        showNotice(kind: kind, NoticeView(
-            icon: icon, tint: .orange, title: title, message: message,
-            primary: "Ferma e salva", secondary: "Continua",
+    private func showStopOffer(kind: String, icon: String, title: L10nKey, message: L10nKey,
+                               onContinue: (() -> Void)? = nil) {
+        showNotice(kind: kind) { NoticeView(
+            icon: icon, tint: .orange, title: tr(title), message: tr(message),
+            primary: tr(.noticeStopAndSave), secondary: tr(.commonContinue),
             onPrimary: { [weak self] in self?.closeNotice(); self?.stop() },
-            onSecondary: { [weak self] in self?.closeNotice(); onContinue?() }))
+            onSecondary: { [weak self] in self?.closeNotice(); onContinue?() }) }
     }
 
     static func displayName(for bundleID: String) -> String {
@@ -494,13 +508,13 @@ final class RecorderModel: ObservableObject {
         // Durante una registrazione l'avviso aspetta che sia salvata: niente distrazioni in chiamata,
         // e «Aggiorna ora» non riavvia l'app a conversione in corso.
         guard !hasUnsavedWork, !ScreenRecordingModel.shared.hasUnsavedWork else { pendingUpdateNotice = version; return }
-        showNotice(kind: "update", NoticeView(
+        showNotice(kind: "update") { NoticeView(
             icon: "arrow.down.circle.fill", tint: .blue,
-            title: "Aggiornamento disponibile",
-            message: "È pronta Cornetta \(version). L'installazione richiede pochi secondi e l'app si riapre da sola.",
-            primary: "Aggiorna ora", secondary: "Più tardi",
+            title: tr(.noticeUpdateTitle),
+            message: tr(.noticeUpdateMessage, version),
+            primary: tr(.noticeUpdateNow), secondary: tr(.noticeUpdateLater),
             onPrimary: { [weak self] in self?.closeNotice(); UpdateManager.shared.installOrCheck() },
-            onSecondary: { [weak self] in self?.closeNotice() }))
+            onSecondary: { [weak self] in self?.closeNotice() }) }
         requeueNotice = { [weak self] in self?.pendingUpdateNotice = version }
         NSSound(named: "Glass")?.play()
     }
@@ -521,15 +535,16 @@ final class RecorderModel: ObservableObject {
         pendingTranscripts = []
         guard let last = ready.last else { return }
         transcriptsInNotice = ready
-        showNotice(kind: "transcript", NoticeView(
+        showNotice(kind: "transcript") { NoticeView(
             icon: "text.bubble.fill", tint: Color(red: 0.11, green: 0.50, blue: 0.24),
-            title: ready.count == 1 ? "Trascrizione pronta" : "\(ready.count) trascrizioni pronte",
+            title: ready.count == 1 ? tr(.noticeTranscriptTitleOne)
+                : tr(.noticeTranscriptTitleMany, String(ready.count)),
             message: ready.count == 1
-                ? "\(Library.shared.title(for: last)) è trascritta, con la tua voce e quella degli altri separate."
-                : "\(ready.count) chiamate sono trascritte, con la tua voce e quella degli altri separate.",
-            primary: "Apri", secondary: "Chiudi",
+                ? tr(.noticeTranscriptMessageOne, Library.shared.title(for: last))
+                : tr(.noticeTranscriptMessageMany, String(ready.count)),
+            primary: tr(.commonOpen), secondary: tr(.commonClose),
             onPrimary: { [weak self] in self?.closeNotice(); LibraryWindow.show(select: last.id) },
-            onSecondary: { [weak self] in self?.closeNotice() }))
+            onSecondary: { [weak self] in self?.closeNotice() }) }
         requeueNotice = { [weak self] in
             guard let self else { return }
             self.pendingTranscripts = ready.filter { old in !self.pendingTranscripts.contains { $0.id == old.id } } + self.pendingTranscripts
@@ -555,7 +570,13 @@ final class RecorderModel: ObservableObject {
         }
     }
 
-    func showNotice<V: View>(kind: String, _ view: V) {
+    func showNotice<V: View>(kind: String, @ViewBuilder _ build: @escaping () -> V) {
+        let factory = { AnyView(build().localizedRoot()) }
+        noticeBuilder = factory
+        presentNotice(kind: kind, factory())
+    }
+
+    private func presentNotice(kind: String, _ view: AnyView) {
         noticePanel?.orderOut(nil)
         noticePanel = FloatingPanel(rootView: view, autosaveName: "CornettaNotice")
         noticeKind = kind
@@ -563,9 +584,17 @@ final class RecorderModel: ObservableObject {
         noticePanel?.show()
     }
 
+    private func refreshNoticeLanguage() {
+        guard let noticeBuilder, let noticeKind else { return }
+        noticePanel?.orderOut(nil)
+        noticePanel = nil
+        presentNotice(kind: noticeKind, noticeBuilder())
+    }
+
     func closeNotice() {
         noticePanel?.orderOut(nil)
         noticePanel = nil
+        noticeBuilder = nil
         noticeKind = nil
         requeueNotice = nil
         transcriptsInNotice = []
@@ -583,15 +612,22 @@ final class RecorderModel: ObservableObject {
             return
         }
         let window = NSWindow(contentRect: .zero, styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        window.title = "Feedback su Cornetta"
+        window.title = tr(.feedbackWindow)
         window.isReleasedWhenClosed = false
         window.level = .floating
         window.contentView = NSHostingView(rootView: FeedbackView(microphone: microphoneName) { [weak self] in
             self?.feedbackWindow?.close()
             self?.feedbackWindow = nil
-        })
+        }.localizedRoot())
         window.center()
         feedbackWindow = window
+        if feedbackLanguageObserver == nil {
+            feedbackLanguageObserver = NotificationCenter.default.addObserver(
+                forName: .cornettaLanguageChanged, object: nil, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.feedbackWindow?.title = tr(.feedbackWindow) }
+            }
+        }
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
     }
@@ -602,7 +638,7 @@ final class RecorderModel: ObservableObject {
     func showDemo() {
         isRecording = true
         elapsed = 12 * 60 + 48
-        microphoneName = "Microfono MacBook Air"
+        microphoneName = tr(.demoMicrophone)
         micLevel = 0.72
         systemLevel = 0.81
         refreshOverlay()
@@ -610,9 +646,10 @@ final class RecorderModel: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             let panel = FloatingPanel(rootView: NoticeView(
                 icon: "arrow.down.circle.fill", tint: .blue,
-                title: "Aggiornamento disponibile",
-                message: "È pronta Cornetta 0.3.0. L'installazione richiede pochi secondi e l'app si riapre da sola.",
-                primary: "Aggiorna ora", secondary: "Più tardi", onPrimary: {}, onSecondary: {}),
+                title: tr(.noticeUpdateTitle),
+                message: tr(.noticeUpdateMessage, "0.3.0"),
+                primary: tr(.noticeUpdateNow), secondary: tr(.noticeUpdateLater),
+                onPrimary: {}, onSecondary: {}).localizedRoot(),
                 autosaveName: "CornettaDemoUpdate")
             panel.setFrameOrigin(NSPoint(x: 80, y: 120))
             panel.show()

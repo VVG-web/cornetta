@@ -26,6 +26,7 @@ namespace Cornetta.App
         private float micLevel;
         private float systemLevel;
         private string microphone = "";
+        private string? microphoneName;
         private bool callEnded;
 
         // Geometria calcolata in Relayout.
@@ -44,15 +45,15 @@ namespace Cornetta.App
         public OverlayForm()
         {
             Text = "Cornetta";
-            AccessibleName = "Cornetta, registrazione in corso";
-            stopButton = new PanelButton("Ferma", theme, scale, Theme.Red, PanelButton.StopGlyph);
-            feedbackButton = new PanelButton("Feedback", theme, scale, null, "", small: true);
-            continueButton = new PanelButton("Continua", theme, scale, null, null, small: true);
+            AccessibleName = L10n.Text(L10nKey.WindowsOverlayAccessibility);
+            stopButton = new PanelButton(L10n.Text(L10nKey.CommonStop), theme, scale, Theme.Red, PanelButton.StopGlyph);
+            feedbackButton = new PanelButton(L10n.Text(L10nKey.CommonFeedback), theme, scale, null, "", small: true);
+            continueButton = new PanelButton(L10n.Text(L10nKey.CommonContinue), theme, scale, null, null, small: true);
             stopButton.Click += (_, __) => StopClicked?.Invoke();
             feedbackButton.Click += (_, __) => FeedbackClicked?.Invoke();
             continueButton.Click += (_, __) => ContinueClicked?.Invoke();
-            tips.SetToolTip(stopButton, "Ferma e salva la registrazione");
-            tips.SetToolTip(feedbackButton, "Segnala un problema o un'idea a chi sviluppa Cornetta");
+            tips.SetToolTip(stopButton, L10n.Text(L10nKey.OverlayStopHelp));
+            tips.SetToolTip(feedbackButton, L10n.Text(L10nKey.OverlayFeedbackHelp));
             Controls.Add(stopButton);
             Controls.Add(feedbackButton);
             Controls.Add(continueButton);
@@ -66,7 +67,8 @@ namespace Cornetta.App
             elapsed = elapsedText;
             micLevel = mic;
             systemLevel = system;
-            microphone = microphoneName != null ? "Microfono: " + microphoneName : "Senza microfono: registro solo la chiamata";
+            this.microphoneName = microphoneName;
+            microphone = MicrophoneCaption();
             if (callEndedSuggestion != callEnded)
             {
                 callEnded = callEndedSuggestion;
@@ -125,7 +127,8 @@ namespace Cornetta.App
                 var glyph = new Rectangle(bannerRow.X, bannerRow.Y, Px(20), bannerRow.Height);
                 DrawText(g, "", glyphFont, Theme.Orange, glyph, TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
                 var text = new Rectangle(glyph.Right + Px(6), bannerRow.Y, bannerRow.Width - glyph.Width - continueButton.Width - Px(12), bannerRow.Height);
-                DrawText(g, "La chiamata sembra finita", bannerFont, theme.Text, text, TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
+                DrawText(g, L10n.Text(L10nKey.OverlayCallEndedTitle), bannerFont, theme.Text, text,
+                    TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
                 using (var pen = new Pen(theme.Divider)) g.DrawLine(pen, bannerRow.X, dividerY, bannerRow.Right, dividerY);
             }
 
@@ -139,8 +142,8 @@ namespace Cornetta.App
             using (var brush = new SolidBrush(Color.FromArgb((int)(255 * alpha), Theme.Red))) g.FillEllipse(brush, dotRect);
 
             DrawText(g, elapsed, timeFont, theme.Text, timeRect, TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPadding);
-            DrawBar(g, "Tu", micLevel, Theme.MeterBlue, micBar);
-            DrawBar(g, "Altri", systemLevel, Theme.MeterGreen, systemBar);
+            DrawBar(g, L10n.Text(L10nKey.OverlayYou), micLevel, Theme.MeterBlue, micBar);
+            DrawBar(g, L10n.Text(L10nKey.OverlayOthers), systemLevel, Theme.MeterGreen, systemBar);
             DrawText(g, microphone, captionFont, theme.SecondaryText, captionRect, TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
         }
 
@@ -165,6 +168,29 @@ namespace Cornetta.App
                 }
             }
         }
+
+        public void Relocalize()
+        {
+            AccessibleName = L10n.Text(L10nKey.WindowsOverlayAccessibility);
+            stopButton.Text = L10n.Text(L10nKey.CommonStop);
+            feedbackButton.Text = L10n.Text(L10nKey.CommonFeedback);
+            continueButton.Text = L10n.Text(L10nKey.CommonContinue);
+            stopButton.AccessibleName = stopButton.Text;
+            feedbackButton.AccessibleName = feedbackButton.Text;
+            continueButton.AccessibleName = continueButton.Text;
+            stopButton.Size = stopButton.PreferredSize;
+            feedbackButton.Size = feedbackButton.PreferredSize;
+            continueButton.Size = continueButton.PreferredSize;
+            tips.SetToolTip(stopButton, L10n.Text(L10nKey.OverlayStopHelp));
+            tips.SetToolTip(feedbackButton, L10n.Text(L10nKey.OverlayFeedbackHelp));
+            microphone = MicrophoneCaption();
+            Relayout();
+            Invalidate();
+        }
+
+        private string MicrophoneCaption() => microphoneName != null
+            ? L10n.Format(L10nKey.MenuMicrophone, microphoneName)
+            : L10n.Text(L10nKey.WindowsOverlayNoMicrophone);
 
         protected override void Dispose(bool disposing)
         {

@@ -54,11 +54,17 @@ namespace Cornetta.App
         private readonly TextBox messageBox;
         private readonly TextBox nameBox;
         private readonly TextBox emailBox;
+        private readonly Label titleLabel;
+        private readonly Label subtitleLabel;
         private readonly CheckBox diagnosticsCheck;
         private readonly LinkLabel previewLink;
         private readonly TextBox previewBox;
         private readonly Label errorLabel;
         private readonly Button sendButton;
+        private readonly Button cancelButton;
+        private readonly Button closeButton;
+        private readonly Label thanksLabel;
+        private readonly Label noteLabel;
         /// <summary>Null finché CollectDiagnostics non ha finito.</summary>
         private string? diagnostics;
         private bool sending;
@@ -68,7 +74,7 @@ namespace Cornetta.App
         {
             this.microphone = microphone;
             using (var g = CreateGraphics()) scale = g.DpiX / 96f;
-            Text = "Feedback su Cornetta";
+            Text = L10n.Text(L10nKey.FeedbackWindow);
             Font = new Font("Segoe UI", 9.75f);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -85,9 +91,9 @@ namespace Cornetta.App
             int width = Px(480);
 
             formPanel = Column(width);
-            var title = WrapLabel("Cosa funziona, cosa no, cosa ti manca?", width, new Font("Segoe UI Semibold", 12f));
-            var subtitle = WrapLabel("Scrivi come ti viene. Se qualcosa non ha funzionato, racconta cosa stavi facendo.", width, Font);
-            subtitle.ForeColor = SystemColors.GrayText;
+            titleLabel = WrapLabel(L10n.Text(L10nKey.FeedbackTitle), width, new Font("Segoe UI Semibold", 12f));
+            subtitleLabel = WrapLabel(L10n.Text(L10nKey.FeedbackSubtitle), width, Font);
+            subtitleLabel.ForeColor = SystemColors.GrayText;
             messageBox = new TextBox
             {
                 Multiline = true,
@@ -96,21 +102,21 @@ namespace Cornetta.App
                 Width = width,
                 Height = Px(140),
                 Margin = new Padding(0, Px(10), 0, Px(10)),
-                AccessibleName = "Messaggio",
+                AccessibleName = L10n.Text(L10nKey.FeedbackMessageAccessibility),
             };
             messageBox.TextChanged += (_, __) => UpdateSendButton();
 
             var people = new TableLayoutPanel { ColumnCount = 2, RowCount = 1, AutoSize = true, Margin = new Padding(0), Width = width };
             people.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
             people.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-            nameBox = new TextBox { Width = (width - Px(8)) / 2, Margin = new Padding(0, 0, Px(8), 0), Text = Settings.FeedbackName, AccessibleName = "Nome (facoltativo)" };
-            emailBox = new TextBox { Width = (width - Px(8)) / 2, Margin = new Padding(0), Text = Settings.FeedbackEmail, AccessibleName = "Email per la risposta (facoltativa)" };
+            nameBox = new TextBox { Width = (width - Px(8)) / 2, Margin = new Padding(0, 0, Px(8), 0), Text = Settings.FeedbackName, AccessibleName = L10n.Text(L10nKey.FeedbackNamePlaceholder) };
+            emailBox = new TextBox { Width = (width - Px(8)) / 2, Margin = new Padding(0), Text = Settings.FeedbackEmail, AccessibleName = L10n.Text(L10nKey.FeedbackEmailPlaceholder) };
             people.Controls.Add(nameBox, 0, 0);
             people.Controls.Add(emailBox, 1, 0);
 
             diagnosticsCheck = new CheckBox
             {
-                Text = "Allega informazioni tecniche (versione, dispositivi audio, log). Nessun audio.",
+                Text = L10n.Text(L10nKey.FeedbackAttachDiagnostics),
                 // Spenta come sul Mac: la diagnostica parte solo se la scegli (pagina /privacy/).
                 Checked = FeedbackPayload.DiagnosticsByDefault,
                 AutoSize = false,
@@ -120,7 +126,7 @@ namespace Cornetta.App
             diagnosticsCheck.Height = TextRenderer.MeasureText(diagnosticsCheck.Text, Font, new Size(width - Px(20), int.MaxValue), TextFormatFlags.WordBreak).Height + Px(6);
             diagnosticsCheck.CheckedChanged += (_, __) => { UpdateDiagnosticsVisibility(); UpdateSendButton(); };
 
-            previewLink = new LinkLabel { Text = "Vedi cosa viene inviato", AutoSize = true, Margin = new Padding(Px(18), Px(2), 0, 0) };
+            previewLink = new LinkLabel { Text = L10n.Text(L10nKey.FeedbackPreview), AutoSize = true, Margin = new Padding(Px(18), Px(2), 0, 0) };
             previewLink.LinkClicked += (_, __) => { previewBox!.Visible = !previewBox.Visible; };
 
             previewBox = new TextBox
@@ -132,10 +138,10 @@ namespace Cornetta.App
                 Width = width,
                 Height = Px(120),
                 Font = new Font("Consolas", 8.25f),
-                Text = "Raccolgo le informazioni…",
+                Text = L10n.Text(L10nKey.FeedbackCollecting),
                 Visible = false,
                 Margin = new Padding(0, Px(6), 0, 0),
-                AccessibleName = "Informazioni tecniche che vengono inviate",
+                AccessibleName = L10n.Text(L10nKey.WindowsFeedbackSentAccessibility),
             };
 
             UpdateDiagnosticsVisibility();
@@ -146,16 +152,16 @@ namespace Cornetta.App
             errorLabel.Margin = new Padding(0, Px(8), 0, 0);
 
             var buttons = new FlowLayoutPanel { FlowDirection = FlowDirection.RightToLeft, AutoSize = false, Width = width, Height = Px(44), Margin = new Padding(0, Px(14), 0, 0), WrapContents = false };
-            sendButton = new Button { Text = "Invia feedback", AutoSize = true, MinimumSize = new Size(Px(110), Px(30)), Enabled = false };
-            var cancelButton = new Button { Text = "Annulla", AutoSize = true, MinimumSize = new Size(Px(90), Px(30)), DialogResult = DialogResult.Cancel };
+            sendButton = new Button { Text = L10n.Text(L10nKey.FeedbackSend), AutoSize = true, MinimumSize = new Size(Px(110), Px(30)), Enabled = false };
+            cancelButton = new Button { Text = L10n.Text(L10nKey.CommonCancel), AutoSize = true, MinimumSize = new Size(Px(90), Px(30)), DialogResult = DialogResult.Cancel };
             sendButton.Click += async (_, __) => await Submit();
             cancelButton.Click += (_, __) => Close();
             buttons.Controls.Add(sendButton);
             buttons.Controls.Add(cancelButton);
             CancelButton = cancelButton;
 
-            formPanel.Controls.Add(title);
-            formPanel.Controls.Add(subtitle);
+            formPanel.Controls.Add(titleLabel);
+            formPanel.Controls.Add(subtitleLabel);
             formPanel.Controls.Add(messageBox);
             formPanel.Controls.Add(people);
             formPanel.Controls.Add(diagnosticsCheck);
@@ -177,16 +183,16 @@ namespace Cornetta.App
                 TextAlign = ContentAlignment.MiddleCenter,
                 Margin = new Padding(0, Px(30), 0, Px(6)),
             };
-            var thanks = WrapLabel("Grazie, il feedback è arrivato.", width, new Font("Segoe UI Semibold", 12f));
-            thanks.TextAlign = ContentAlignment.MiddleCenter;
-            var note = WrapLabel("Lo leggo e ti scrivo se hai lasciato l'email.", width, Font);
-            note.TextAlign = ContentAlignment.MiddleCenter;
-            note.ForeColor = SystemColors.GrayText;
-            var closeButton = new Button { Text = "Chiudi", AutoSize = true, MinimumSize = new Size(Px(90), Px(30)), Anchor = AnchorStyles.None, Margin = new Padding(0, Px(16), 0, Px(30)) };
+            thanksLabel = WrapLabel(L10n.Text(L10nKey.FeedbackThanksTitle), width, new Font("Segoe UI Semibold", 12f));
+            thanksLabel.TextAlign = ContentAlignment.MiddleCenter;
+            noteLabel = WrapLabel(L10n.Text(L10nKey.FeedbackThanksMessage), width, Font);
+            noteLabel.TextAlign = ContentAlignment.MiddleCenter;
+            noteLabel.ForeColor = SystemColors.GrayText;
+            closeButton = new Button { Text = L10n.Text(L10nKey.CommonClose), AutoSize = true, MinimumSize = new Size(Px(90), Px(30)), Anchor = AnchorStyles.None, Margin = new Padding(0, Px(16), 0, Px(30)) };
             closeButton.Click += (_, __) => Close();
             sentPanel.Controls.Add(check);
-            sentPanel.Controls.Add(thanks);
-            sentPanel.Controls.Add(note);
+            sentPanel.Controls.Add(thanksLabel);
+            sentPanel.Controls.Add(noteLabel);
             sentPanel.Controls.Add(closeButton);
 
             formPanel.Location = new Point(Px(20), Px(20));
@@ -196,11 +202,12 @@ namespace Cornetta.App
             AcceptButton = null;
             Shown += async (_, __) =>
             {
-                SetCue(nameBox, "Nome (facoltativo)");
-                SetCue(emailBox, "Email per la risposta (facoltativa)");
+                ApplyLanguage();
                 messageBox.Focus();
                 await CollectDiagnostics();
             };
+            AppLanguageSettings.LanguageChanged += ApplyLanguage;
+            FormClosed += (_, __) => AppLanguageSettings.LanguageChanged -= ApplyLanguage;
         }
 
         /// <summary>Dispositivi, sessioni audio e log si leggono dopo l'apertura, fuori dal thread dell'interfaccia.</summary>
@@ -274,14 +281,14 @@ namespace Cornetta.App
         {
             sending = true;
             UpdateSendButton();
-            sendButton.Text = "Invio…";
+            sendButton.Text = L10n.Text(L10nKey.FeedbackSending);
             errorLabel.Visible = false;
             Settings.FeedbackName = nameBox.Text.Trim();
             Settings.FeedbackEmail = emailBox.Text.Trim();
             string? error = await FeedbackSender.SendAsync(messageBox.Text, nameBox.Text.Trim(), emailBox.Text.Trim(),
                 diagnosticsCheck.Checked ? diagnostics : null, FeedbackPayload.MicrophoneToSend(microphone, diagnosticsCheck.Checked));
             sending = false;
-            sendButton.Text = "Invia feedback";
+            sendButton.Text = L10n.Text(L10nKey.FeedbackSend);
             UpdateSendButton();
             if (error == null)
             {
@@ -291,9 +298,32 @@ namespace Cornetta.App
             }
             else
             {
-                errorLabel.Text = "⚠ " + error;
+                Diagnostics.Log("Feedback non inviato: " + error);
+                errorLabel.Text = "⚠ " + L10n.Text(L10nKey.FeedbackFailed);
                 errorLabel.Visible = true;
             }
+        }
+
+        private void ApplyLanguage()
+        {
+            Text = L10n.Text(L10nKey.FeedbackWindow);
+            titleLabel.Text = L10n.Text(L10nKey.FeedbackTitle);
+            subtitleLabel.Text = L10n.Text(L10nKey.FeedbackSubtitle);
+            messageBox.AccessibleName = L10n.Text(L10nKey.FeedbackMessageAccessibility);
+            nameBox.AccessibleName = L10n.Text(L10nKey.FeedbackNamePlaceholder);
+            emailBox.AccessibleName = L10n.Text(L10nKey.FeedbackEmailPlaceholder);
+            SetCue(nameBox, L10n.Text(L10nKey.FeedbackNamePlaceholder));
+            SetCue(emailBox, L10n.Text(L10nKey.FeedbackEmailPlaceholder));
+            diagnosticsCheck.Text = L10n.Text(L10nKey.FeedbackAttachDiagnostics);
+            previewLink.Text = L10n.Text(L10nKey.FeedbackPreview);
+            previewBox.AccessibleName = L10n.Text(L10nKey.WindowsFeedbackSentAccessibility);
+            if (diagnostics == null) previewBox.Text = L10n.Text(L10nKey.FeedbackCollecting);
+            sendButton.Text = L10n.Text(sending ? L10nKey.FeedbackSending : L10nKey.FeedbackSend);
+            cancelButton.Text = L10n.Text(L10nKey.CommonCancel);
+            closeButton.Text = L10n.Text(L10nKey.CommonClose);
+            thanksLabel.Text = L10n.Text(L10nKey.FeedbackThanksTitle);
+            noteLabel.Text = L10n.Text(L10nKey.FeedbackThanksMessage);
+            if (errorLabel.Visible) errorLabel.Text = "⚠ " + L10n.Text(L10nKey.FeedbackFailed);
         }
     }
 }
