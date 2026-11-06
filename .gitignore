@@ -9,3 +9,5 @@ build/
 .impeccable/decision/
 .impeccable/questions/
 __pycache__/
+.venv/
+test-results/

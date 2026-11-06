@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Controlli comuni prima di ogni deploy: li caricano deploy-site.sh, release.sh e windows/tools/publish.sh.
 #   source scripts/lib/guardia.sh && guardia      # dalla radice del repo
 # Il deploy pubblica worker/ così com'è sul disco: si parte solo da un repo pulito, su un ramo allineato a
