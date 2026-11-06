@@ -45,6 +45,13 @@ struct ScreenRecordingTests {
         #expect(bytes < 2_000_000_000)
     }
 
+    @Test func keyFrameIntervalUsesFrameCountSupportedByHEVC() throws {
+        let settings = ScreenEncoding.videoSettings(for: .init(width: 640, height: 360))
+        let compression = try #require(settings[AVVideoCompressionPropertiesKey] as? [String: Any])
+        #expect(compression[AVVideoMaxKeyFrameIntervalKey] as? Int == ScreenEncoding.framesPerSecond * 2)
+        #expect(compression[AVVideoMaxKeyFrameIntervalDurationKey] == nil)
+    }
+
     @Test func screenFileNameUsesMP4() throws {
         let components = DateComponents(year: 2026, month: 11, day: 3, hour: 12, minute: 30)
         let date = try #require(Calendar.current.date(from: components))

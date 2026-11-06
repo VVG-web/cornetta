@@ -46,7 +46,7 @@ public enum ScreenEncoding {
          AVVideoCompressionPropertiesKey: [
              AVVideoAverageBitRateKey: videoBitRate(for: size),
              AVVideoExpectedSourceFrameRateKey: framesPerSecond,
-             AVVideoMaxKeyFrameIntervalDurationKey: 2,
+             AVVideoMaxKeyFrameIntervalKey: framesPerSecond * 2,
              AVVideoAllowFrameReorderingKey: false,
          ] as [String: Any]]
     }
