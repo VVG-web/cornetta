@@ -42,14 +42,14 @@ def launch(browser_type) -> Browser:
     return browser_type.launch(headless=True)
 
 
-def install_routes(page: Page, host: str) -> None:
+def install_routes(page: Page, host: str, latest: dict) -> None:
     def route_request(route) -> None:
         url = route.request.url
         path = urlparse(url).path
         if urlparse(url).netloc != host:
             route.abort()
         elif path == "/downloads/latest.json":
-            route.fulfill(status=200, content_type="application/json", body=json.dumps(LATEST))
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(latest))
         elif path == "/js/p.js":
             route.fulfill(status=200, content_type="application/javascript", body="")
         elif path == "/api/e":
@@ -61,7 +61,8 @@ def install_routes(page: Page, host: str) -> None:
 
 
 def open_page(browser: Browser, base: str, path: str, *, user_agent: str | None = None,
-              viewport: dict | None = None, mobile: bool = False) -> tuple:
+              viewport: dict | None = None, mobile: bool = False, latest: dict | None = None,
+              init_script: str | None = None) -> tuple:
     context = browser.new_context(
         user_agent=user_agent,
         viewport=viewport or {"width": 1440, "height": 1000},
@@ -69,7 +70,9 @@ def open_page(browser: Browser, base: str, path: str, *, user_agent: str | None 
         has_touch=mobile,
     )
     page = context.new_page()
-    install_routes(page, urlparse(base).netloc)
+    install_routes(page, urlparse(base).netloc, LATEST if latest is None else latest)
+    if init_script:
+        page.add_init_script(init_script)
     errors = []
     page.on("pageerror", lambda error: errors.append(str(error)))
     response = page.goto(base + path, wait_until="networkidle")
@@ -117,6 +120,14 @@ def run(base: str, browser: Browser) -> None:
     context.close()
     print("PASS Windows download selection")
 
+    context, page = open_page(browser, base, "/en/", user_agent=WINDOWS_UA, latest={"mac": LATEST["mac"]})
+    assert page.locator("[data-download-primary]").first.get_attribute("href") == "/download"
+    note = page.locator("#os-note")
+    assert note.is_visible()
+    assert note.inner_text() == "The Windows version is coming soon."
+    context.close()
+    print("PASS missing Windows release metadata fallback")
+
     context, page = open_page(
         browser, base, "/en/", user_agent=IPHONE_UA, viewport={"width": 390, "height": 844}, mobile=True
     )
@@ -134,6 +145,17 @@ def run(base: str, browser: Browser) -> None:
     capture(page, "site-en-mobile.png")
     context.close()
     print("PASS mobile guidance, copy fallback, layout")
+
+    context, page = open_page(
+        browser, base, "/en/", user_agent=IPHONE_UA, viewport={"width": 390, "height": 844}, mobile=True,
+        init_script="Object.defineProperty(navigator, 'clipboard', {value: undefined});"
+    )
+    page.get_by_role("button", name="Copy link").click()
+    link = page.locator("#os-note .os-link")
+    link.wait_for(state="visible")
+    assert page.url in link.inner_text()
+    context.close()
+    print("PASS clipboard-unavailable fallback")
 
     context, page = open_page(browser, base, "/")
     assert page.locator("html").get_attribute("lang") == "it"

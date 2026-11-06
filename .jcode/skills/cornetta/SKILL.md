@@ -33,8 +33,9 @@ send messages, access production data, or use signing credentials.
 ## Verify changes
 
 Run focused tests first, then require a green `./scripts/check.sh`. The gate covers
-macOS, cross-platform .NET logic, scripts, Worker behavior, linting, and isolated
-browser smoke tests. It never deploys or accesses production data.
+macOS tests and a mounted universal DMG, cross-platform .NET tests and Release build,
+scripts, Worker behavior, linting, and isolated browser smoke tests with metadata and
+clipboard failure paths. It never deploys or accesses production data.
 
 For capture changes, unit tests are insufficient. Select the relevant real check:
 

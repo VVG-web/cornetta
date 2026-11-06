@@ -40,8 +40,38 @@ swiftformat Sources Tests scripts/make-icon.swift --lint --quiet
 section "Mac tests"
 ./scripts/test.sh
 
+section "Mac universal package"
+./scripts/build-dmg.sh
+PACKAGE="dist/Cornetta-${VERSION:-0.0.0-dev}.dmg"
+[ -f "$PACKAGE" ] || { echo "Missing package $PACKAGE" >&2; exit 1; }
+codesign --verify "$PACKAGE"
+MOUNT_ROOT="${JCODE_SCRATCH_DIR:-$HOME/.cache/jcode-cornetta}"
+mkdir -p "$MOUNT_ROOT"
+MOUNT=$(mktemp -d "$MOUNT_ROOT/cornetta-dmg.XXXXXX")
+cleanup() { hdiutil detach "$MOUNT" >/dev/null 2>&1 || true; }
+trap cleanup EXIT
+hdiutil attach "$PACKAGE" -nobrowse -readonly -mountpoint "$MOUNT" >/dev/null
+APP="$MOUNT/Cornetta.app"
+[ -x "$APP/Contents/MacOS/Cornetta" ]
+[ -d "$APP/Contents/Frameworks/Sparkle.framework" ]
+[ "$(plutil -extract CFBundleIdentifier raw -o - "$APP/Contents/Info.plist")" = com.stellakamikaze.cornetta ]
+[ "$(plutil -extract CFBundleVersion raw -o - "$APP/Contents/Info.plist")" = "${VERSION:-0.0.0-dev}" ]
+[ -L "$MOUNT/Applicazioni" ]
+[ "$(readlink "$MOUNT/Applicazioni")" = /Applications ]
+lipo -info "$APP/Contents/MacOS/Cornetta" | grep -q arm64
+lipo -info "$APP/Contents/MacOS/Cornetta" | grep -q x86_64
+plutil -lint "$APP/Contents/Info.plist" >/dev/null
+codesign --verify --deep --strict "$APP"
+hdiutil detach "$MOUNT" >/dev/null
+rmdir "$MOUNT"
+trap - EXIT
+printf 'Mounted package verified: %s (arm64 + x86_64, Sparkle, signature)\n' "$PACKAGE"
+
 section "Windows tests (cross-platform)"
 (cd windows && dotnet test Cornetta.Windows.sln)
+
+section "Windows Release build"
+(cd windows && dotnet build Cornetta.Windows.sln -c Release --no-restore)
 
 section "Script tests"
 python3 -m unittest discover -s scripts/tests

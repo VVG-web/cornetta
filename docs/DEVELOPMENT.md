@@ -56,8 +56,11 @@ Set `CORNETTA_CHROMIUM=/absolute/path/to/chromium` to override browser discovery
 ./scripts/check.sh
 ```
 
-It runs ShellCheck, SwiftLint, SwiftFormat, macOS tests, cross-platform .NET tests,
-Python script tests, Worker tests, isolated browser smoke tests, and `git diff --check`.
+It runs ShellCheck, SwiftLint, SwiftFormat, macOS tests, a universal DMG build that
+is mounted and inspected for both architectures, Sparkle and signature validity,
+cross-platform .NET tests and Release compilation, Python script tests, Worker
+tests, isolated browser smoke tests (including metadata and clipboard failure paths),
+and `git diff --check`.
 It does not deploy, push, release, access production data, or use signing keys.
 
 For an environment without any browser, `CORNETTA_SKIP_BROWSER=1 ./scripts/check.sh`
