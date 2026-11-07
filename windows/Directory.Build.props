@@ -6,8 +6,8 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Deterministic>true</Deterministic>
     <Product>Cornetta</Product>
-    <Company>stellakamikaze</Company>
-    <Authors>stellakamikaze</Authors>
+    <Company>VVG-web</Company>
+    <Authors>VVG-web</Authors>
     <Copyright>MIT</Copyright>
     <!-- La versione arriva dal CI (-p:Version=0.3.0). In locale resta 0.0.0. -->
     <Version Condition="'$(Version)' == ''">0.0.0</Version>
