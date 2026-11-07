@@ -34,11 +34,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh label create upstream-review --color 5319E7 --description "Selective upstream review" 2>/dev/null || true
-          number=$(gh issue list --label upstream-review --state open --limit 1 --json number --jq '.[0].number')
+          number=$(gh issue list --state open --search "Upstream review in:title" --limit 1 --json number --jq '.[0].number')
           if [ -n "$number" ]; then
             gh issue edit "$number" --title "Upstream review" --body-file upstream-review.md
             echo "Updated issue #$number"
           else
-            gh issue create --title "Upstream review" --body-file upstream-review.md --label upstream-review
+            gh issue create --title "Upstream review" --body-file upstream-review.md
           fi
