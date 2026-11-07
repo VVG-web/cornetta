@@ -84,6 +84,7 @@ class PrivacyGuardTests(unittest.TestCase):
         for text in (mac, win):
             self.assertNotIn("SUScheduledCheckInterval", text)
             self.assertNotIn("Velopack", text)
+        self.assertIn("UseCookies = false", win)
 
     def test_macos_bundle_has_no_update_feed_metadata(self):
         plist = (ROOT / "Resources/Info.plist").read_text(encoding="utf-8")

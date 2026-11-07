@@ -46,7 +46,8 @@ namespace Cornetta.App
         private static HttpClient CreateClient()
         {
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
-            return new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            var handler = new HttpClientHandler { UseCookies = false };
+            return new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(15) };
         }
 
         public string? AvailableVersion => availableVersion;
