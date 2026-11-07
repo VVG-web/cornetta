@@ -25,8 +25,6 @@ FORBIDDEN_ENDPOINTS = (
     "validateTelemetry",
     "SUFeedURL",
     "SUPublicEDKey",
-    "UpdateFeedPublicKey",
-    "FeedSignature",
     "TELEGRAM_TOKEN",
 )
 FORBIDDEN_FILES = (
@@ -79,11 +77,15 @@ class PrivacyGuardTests(unittest.TestCase):
         win = (ROOT / "windows/src/Cornetta.App/Updates.cs").read_text(encoding="utf-8")
         win_info = (ROOT / "windows/src/Cornetta.App/AppInfo.cs").read_text(encoding="utf-8")
         for text in (mac_info, win_info):
-            self.assertIn("api.github.com/repos/", text)
+            self.assertIn("vvg-web.github.io/cornetta-en/update/feed.json", text)
             self.assertIn("VVG-web/cornetta-en", text)
+            self.assertTrue("updateFeedPublicKey" in text or "UpdateFeedPublicKey" in text)
         for text in (mac, win):
             self.assertNotIn("SUScheduledCheckInterval", text)
             self.assertNotIn("Velopack", text)
+            self.assertIn("UpdateFeedSignature", text)
+            self.assertNotIn("latestReleaseAPIURL", text)
+            self.assertNotIn("LatestReleaseApiUrl", text)
         self.assertIn("UseCookies = false", win)
 
     def test_macos_bundle_has_no_update_feed_metadata(self):

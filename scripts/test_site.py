@@ -2,6 +2,8 @@
 """Run isolated browser smoke tests against the static site in site/."""
 
 import os
+import json
+import urllib.request
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -89,6 +91,14 @@ def assert_no_analytics(page: Page, requests: list[str]) -> None:
 
 def run(base: str, browser: Browser) -> None:
     RESULTS.mkdir(exist_ok=True)
+
+    with urllib.request.urlopen(base + "/update/feed.json") as response:
+        feed = json.load(response)
+    assert feed["schema"] == 1
+    assert feed["version"].count(".") == 2
+    with urllib.request.urlopen(base + "/update/feed.json.sig") as response:
+        assert len(response.read().strip()) == 88
+    print("PASS signed update feed is present")
 
     context, page, requests = open_page(browser, base, "/en/")
     assert "Cornetta" in page.title()

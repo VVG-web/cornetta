@@ -19,11 +19,13 @@ compatibility: Full verification requires macOS with Xcode, .NET 10, Python 3, a
 
 - Start with a focused reproduction and the smallest responsible change.
 - Preserve the privacy boundary: no background network connections, no telemetry, no analytics.
-  The only network actions are the user-triggered GitHub release check and opening a GitHub issue.
+  The only network actions are the user-triggered signed update feed and opening a GitHub issue.
 - Audio, transcripts, file names, device names, contacts and diagnostics must never be uploaded.
 - Keep local-first behavior: recordings and transcripts stay in the user's folders.
 - Update `site/privacy/index.html`, `site/en/privacy/index.html`, and `site/llms.txt` before adding any
   outbound request.
+- Treat `site/update/feed.json` as signed data: never edit it without re-signing with
+  `scripts/sign-feed.py`, and never commit the private key.
 - Keep existing public formats compatible: transcript JSON uses `Transcript.decoder`.
 - Put every user-facing string in `localization/strings.json`, run `scripts/localization.py`, and keep
   both Italian and English complete.

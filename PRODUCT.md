@@ -42,8 +42,9 @@ di rilascio, parte da questo taglio: niente toni da prodotto premium.
 - Windows (beta): Windows 10 e 11, installer per utente senza permessi di amministratore. L'installer non
   è firmato: SmartScreen chiede «Ulteriori informazioni → Esegui comunque». Niente trascrizione.
 - Telefoni esclusi: iOS non dà l'audio delle chiamate, Android lo blocca dalla 10.
-- Nessun aggiornamento automatico. Il menu controlla manualmente l'ultima release su GitHub e apre la
-  pagina per scaricarla. Non esiste Sparkle, Velopack UpdateManager o feed firmato.
+- Nessun aggiornamento automatico. Il menu scarica un feed firmato ECDSA P-256 da GitHub Pages, verifica
+  la firma e apre la pagina della release. Non esiste Sparkle, Velopack UpdateManager o installazione
+  automatica.
 - Nessun feedback server: il pulsante apre una issue pubblica su GitHub nel browser.
 - Dati che partono: nessuno in background. Solo il controllo manuale delle release su GitHub e
   l'apertura di una issue. Nessuna telemetria, analytics, cookie o identificativo di installazione.

@@ -11,6 +11,8 @@ scripts/test.sh                                  # test Mac (Core e app)
 cd windows && dotnet test Cornetta.Windows.sln   # test Windows, girano anche su Mac
 python3 -m unittest discover -s scripts/tests   # test degli script e del sito
 scripts/build-dmg.sh                             # DMG macOS universale
+scripts/sign-feed.py --check-key                 # chiave feed fuori dal repo
+scripts/sign-feed.py --sign site/update/feed.json
 ./scripts/check.sh                               # gate completo
 ```
 
@@ -18,8 +20,9 @@ scripts/build-dmg.sh                             # DMG macOS universale
 
 - Privacy prima di tutto: niente telemetria, analytics, cookie, crash reporting, server di feedback o
   aggiornamenti automatici. L'app non apre connessioni in background.
-- Le uniche connessioni sono quelle avviate dall'utente: controllo manuale delle release su GitHub e
-  apertura di una issue su GitHub. Audio e trascrizioni non lasciano il computer.
+- Le uniche connessioni sono quelle avviate dall'utente: feed firmato su GitHub Pages e apertura di una
+  issue su GitHub. La firma ECDSA P-256 va verificata prima di leggere la versione. Audio e trascrizioni
+  non lasciano il computer.
 - Ogni nuovo testo dell'interfaccia entra in `localization/strings.json`, poi si rigenera con
   `scripts/localization.py`. Italiano e inglese devono restare completi.
 - Ogni guasto trovato su una macchina vera diventa un controllo in CI o nei test prima del rilascio
@@ -32,6 +35,10 @@ scripts/build-dmg.sh                             # DMG macOS universale
   deve fallire se ricompaiono.
 - NON aggiungere Sparkle, Velopack UpdateManager o timer di controllo aggiornamenti. Il controllo è solo
   manuale e apre GitHub.
+- NON modificare `site/update/feed.json` senza firmarlo di nuovo con `scripts/sign-feed.py --sign`. La
+  chiave privata resta in `~/.config/cornetta/update-feed-key.pem`, fuori dal repo e con permessi 600.
+- NON pubblicare un feed che non supera `python3 -m unittest discover -s scripts/tests` e non aggiornare
+  la versione senza aver prima calcolato gli SHA-256 degli asset.
 - NON mettere `kAudioAggregateDeviceTapAutoStartKey` a true: su macOS 26 l'aggregate col tap non parte
   (zero callback).
 - NON leggere il JSON delle trascrizioni col decoder di default: le date sono ISO 8601 e tutto risulta

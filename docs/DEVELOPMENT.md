@@ -66,15 +66,15 @@ checks. This is an explicit exception, not a substitute for the full gate when a
 
 The app must not open background connections. The only allowed network actions are:
 
-- a user-triggered GitHub release check in `Sources/Cornetta/UpdateManager.swift` and
-  `windows/src/Cornetta.App/Updates.cs`;
+- a user-triggered fetch of the ECDSA-signed update feed in
+  `Sources/Cornetta/UpdateManager.swift` and `windows/src/Cornetta.App/Updates.cs`;
 - opening GitHub Issues in the browser when the user chooses Feedback;
 - system services such as Apple speech model downloads, which are outside app code.
 
 Do not add telemetry, analytics, crash reporting, ad SDKs, a feedback server, or an automatic updater.
 `python3 -m unittest discover -s scripts/tests -p 'test_privacy_guard.py'` checks that the old endpoints
 and components stay gone. Any new outbound request must be opt-in, documented in both privacy pages, and
-covered by a test.
+covered by a test. The update feed and its key procedure are documented in `docs/UPDATES.md`.
 
 ## Real application checks
 
@@ -119,6 +119,7 @@ chooses another language. This choice is independent from the speech-recognition
 
 ## Releases
 
-There is no automatic updater and no production deployment script. Build and verify locally, then create
-a GitHub Release manually with the DMG or Windows installer. Users check for updates from the app menu
-and download from the GitHub Release page. Record SHA-256 fingerprints in the release notes.
+There is no automatic updater and no production deployment script. The static site is deployed by
+`.github/workflows/pages.yml`. Build and verify locally, update and sign `site/update/feed.json`, then
+create a GitHub Release manually with the DMG or Windows installer. Users check the signed feed from the
+app menu and download from the GitHub Release page. Record SHA-256 fingerprints in the release notes.

@@ -42,7 +42,8 @@
     <p>There is no telemetry, installation identifier, analytics or automatic crash report. The app opens no background connections.</p>
 
     <h2>GitHub update check</h2>
-    <p>The only possible network connection is the one you start from the menu with <strong>Check for updates on GitHub…</strong>. At that moment the app asks GitHub for the latest release of <a href="https://github.com/VVG-web/cornetta-en">VVG-web/cornetta-en</a>. The request contains the app version and a normal User-Agent; it contains no audio, text or file names. GitHub sees your IP address and applies its own privacy policy. Cornetta does not download or install updates automatically.</p>
+    <p>The only possible network connection is the one you start from the menu with <strong>Check for updates on GitHub…</strong>. At that moment the app downloads two static files from GitHub Pages: <code>update/feed.json</code> and its signature <code>update/feed.json.sig</code>. The request contains the app version and a normal User-Agent; it contains no audio, text or file names. GitHub sees your IP address and applies its own privacy policy.</p>
+    <p>The ECDSA P-256 signature is verified with a public key embedded in the app before the version is read. If the signature is invalid, Cornetta shows no update. It does not download or install updates automatically.</p>
 
     <h2>Feedback</h2>
     <p>The Feedback button opens a new public GitHub issue in your browser. Nothing is submitted automatically from the app: you write the text and decide whether to publish it. The issue is public and handled by GitHub.</p>

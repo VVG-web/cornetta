@@ -80,7 +80,7 @@
       </div>
       <ul class="details">
         <li><h3>Recordings and transcripts</h3><p>They stay in a folder on your computer. They are never uploaded.</p></li>
-        <li><h3>Update check</h3><p>Only when you choose “Check for updates on GitHub”. The request goes to GitHub and contains no audio, text or file names. Cornetta does not install updates automatically.</p></li>
+        <li><h3>Update check</h3><p>Only when you choose “Check for updates on GitHub”. The app downloads a feed and its ECDSA signature from GitHub Pages, verifies the signature, and only then reads the version. The request contains no audio, text or file names. Cornetta does not install updates automatically.</p></li>
         <li><h3>Feedback</h3><p>The button opens a public GitHub issue in your browser. There is no automatic submission and the app collects nothing.</p></li>
         <li><h3>No cookies</h3><p>This is a static site: no cookies, Plausible, Telegram or other analytics services.</p></li>
       </ul>
@@ -115,7 +115,7 @@
         <details><summary>Is Cornetta free?</summary><div class="answer"><p>Yes. Free, with no account, no subscription and no ads.</p></div></details>
         <details><summary>Which apps does it work with?</summary><div class="answer"><p>Any app that uses your computer's microphone and audio: WhatsApp, FaceTime, Google Meet, Zoom, Microsoft Teams, Slack, Discord, Skype and calls in the browser.</p></div></details>
         <details><summary>Does Cornetta collect data?</summary><div class="answer"><p>No. This version has no telemetry, analytics, cookies or feedback server. The only connection is one you start: the manual GitHub release check or opening a GitHub issue.</p><p>Audio and transcripts never leave your computer.</p></div></details>
-        <details><summary>Are updates automatic?</summary><div class="answer"><p>No. Choose <strong>Check for updates on GitHub…</strong> from the menu: Cornetta compares the installed version with the latest release and, if there is a new one, opens the GitHub page. It does not download or install anything automatically.</p></div></details>
+        <details><summary>Are updates automatic?</summary><div class="answer"><p>No. Choose <strong>Check for updates on GitHub…</strong> from the menu: Cornetta downloads a signed feed from GitHub Pages, verifies its ECDSA P-256 signature with the public key embedded in the app, compares the version and, if there is a new one, opens the GitHub page. It does not download or install anything automatically.</p></div></details>
         <details><summary>Where are recordings saved?</summary><div class="answer"><p>In <strong>Music › Cornetta</strong>, as .m4a files (AAC, 48 kHz, stereo) named with date and time. They stay on your computer.</p></div></details>
         <details><summary>Does transcription use the internet?</summary><div class="answer"><p>No. On macOS 26 or later it uses Apple speech recognition on the Mac. The system may download a language model once, but the call content is never sent to Cornetta.</p></div></details>
         <details><summary>Is it legal to record a call?</summary><div class="answer"><p>It depends on where you live. In Italy and other one-party-consent places you may record a conversation you take part in for personal use; sharing it without consent is not allowed. Other countries and some US states require everyone's consent. Check your local law before recording.</p></div></details>

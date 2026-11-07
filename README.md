@@ -6,9 +6,10 @@ based on the original [Cornetta](https://github.com/stellakamikaze/cornetta) by 
 
 - Download: [GitHub Releases](https://github.com/VVG-web/cornetta-en/releases/latest)
   (macOS 14.4+, Apple Silicon and Intel · Windows 10 and 11, beta)
+- Site: [vvg-web.github.io/cornetta-en](https://vvg-web.github.io/cornetta-en/)
 - Privacy: no telemetry, no analytics, no cookies, no feedback server.
   Recordings and transcripts stay on the computer.
-- Updates: manual check against GitHub Releases. Nothing is downloaded or installed automatically.
+- Updates: manual check against a signed feed on GitHub Pages. Nothing is downloaded or installed automatically.
 - Stack: Swift and Core Audio process taps (`Sources/`), C# .NET Framework 4.8 with NAudio (`windows/`),
   static site (`site/`).
 - License: MIT. Interface text and code comments are in Italian.
@@ -32,8 +33,9 @@ feedback. L'app non apre connessioni in background.
 
 Le uniche connessioni possibili sono quelle avviate dall'utente:
 
-- **Controlla gli aggiornamenti su GitHub…** chiede a GitHub l'ultima release del repository fork.
-  La richiesta contiene la versione dell'app e un normale User-Agent, mai audio, testi o nomi di file.
+- **Controlla gli aggiornamenti su GitHub…** scarica il feed firmato da GitHub Pages, verifica la firma
+  ECDSA P-256 e solo allora legge la versione. La richiesta contiene la versione dell'app e un normale
+  User-Agent, mai audio, testi o nomi di file.
 - **Feedback** apre una nuova segnalazione pubblica su GitHub nel browser. Non c'è nessun invio automatico.
 
 Audio e trascrizioni non lasciano mai il computer. La trascrizione usa il riconoscimento vocale di Apple
@@ -184,9 +186,10 @@ pubblichino su un server esterno.
 
 ## Sito statico
 
-Le pagine sono in `site/`. Non c'è un Worker, un database, un servizio di analytics o un endpoint API.
-Il sito può essere pubblicato su qualunque hosting statico. I pulsanti di download puntano direttamente a
-GitHub Releases.
+Le pagine sono in `site/` e vengono pubblicate su GitHub Pages dal workflow `.github/workflows/pages.yml`.
+Non c'è un Worker, un database, un servizio di analytics o un endpoint API. I pulsanti di download
+puntano direttamente a GitHub Releases. Il feed aggiornamenti e la sua firma stanno in `site/update/`;
+la procedura è in [docs/UPDATES.md](docs/UPDATES.md).
 
 ## Notarizzazione Apple
 

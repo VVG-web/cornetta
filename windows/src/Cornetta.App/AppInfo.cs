@@ -13,8 +13,10 @@ namespace Cornetta.App
     {
         public const string GithubRepository = "VVG-web/cornetta-en";
         public const string LatestReleaseUrl = "https://github.com/" + GithubRepository + "/releases/latest";
-        public const string LatestReleaseApiUrl = "https://api.github.com/repos/" + GithubRepository + "/releases/latest";
         public const string NewIssueUrl = "https://github.com/" + GithubRepository + "/issues/new";
+        public const string UpdateFeedUrl = "https://vvg-web.github.io/cornetta-en/update/feed.json";
+        public const string UpdateFeedSignatureUrl = "https://vvg-web.github.io/cornetta-en/update/feed.json.sig";
+        public const string UpdateFeedPublicKey = "BCcSn9flFlqQeVWQqoM9iFr8xKhtsy5juX9CJO70Or3aPgQVJyZOfnWeJTTYImxkxm9U20bgDWVqM5BO/NNvi60=";
 
         public static string Version
         {

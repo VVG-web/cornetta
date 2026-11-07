@@ -5,7 +5,7 @@
 Key facts:
 - Price: free. No account, no ads. Open source under the MIT license.
 - Privacy: recordings and transcripts never leave the computer. This version has no telemetry, no analytics, no cookies, no installation identifier and no feedback server. The app opens no background connections.
-- Update check: only when the user chooses "Check for updates on GitHub". The app asks GitHub for the latest release of VVG-web/cornetta-en; the request carries the app version and a normal User-Agent, never audio, text or file names. The app does not download or install updates automatically.
+- Update check: only when the user chooses "Check for updates on GitHub". The app downloads `update/feed.json` and `update/feed.json.sig` from GitHub Pages, verifies the ECDSA P-256 signature with the public key embedded in the app, and only then reads the version. The request carries the app version and a normal User-Agent, never audio, text or file names. The app does not download or install updates automatically.
 - Feedback: the button opens a new public GitHub issue in the browser. Nothing is submitted automatically by the app.
 - Website: static. No Plausible, Telegram, cookies or visit counting.
 - How it works: Core Audio process taps (macOS 14.2+) capture system audio; the microphone and the tap share one private aggregate device, so both voices stay in sync. No BlackHole or virtual driver.
@@ -31,3 +31,4 @@ Key facts:
 ## Downloads
 - [Latest GitHub release](https://github.com/VVG-web/cornetta-en/releases/latest): macOS disk image and Windows installer
 - [All releases](https://github.com/VVG-web/cornetta-en/releases): release notes and SHA-256 fingerprints
+- [Signed update feed](/update/feed.json): version, release page and asset hashes, signed by `/update/feed.json.sig`

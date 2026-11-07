@@ -9,18 +9,21 @@ enum UpdateCheckResult {
     case failed
 }
 
-private struct GitHubRelease: Decodable {
-    let tagName: String
-    let htmlURL: URL
+private struct SignedFeed: Decodable {
+    let schema: Int
+    let version: String
+    let releaseURL: URL
 
     enum CodingKeys: String, CodingKey {
-        case tagName = "tag_name"
-        case htmlURL = "html_url"
+        case schema
+        case version
+        case releaseURL = "release_url"
     }
 }
 
-/// Controllo manuale delle release su GitHub. Non parte niente all'avvio e non c'è nessun timer:
-/// la richiesta esiste solo dopo «Controlla gli aggiornamenti…». Non scarica e non installa nulla.
+/// Controllo manuale del feed firmato ospitato su GitHub Pages. Non parte niente all'avvio
+/// e non c'è nessun timer: la richiesta esiste solo dopo «Controlla gli aggiornamenti…».
+/// La firma ECDSA P-256 viene verificata prima di leggere la versione. Non scarica e non installa nulla.
 @MainActor
 final class UpdateManager: ObservableObject {
     static let shared = UpdateManager()
@@ -42,33 +45,46 @@ final class UpdateManager: ObservableObject {
         isChecking = true
         defer { isChecking = false }
 
-        var request = URLRequest(url: AppInfo.latestReleaseAPIURL)
-        request.httpMethod = "GET"
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        request.setValue("Cornetta/\(AppInfo.version)", forHTTPHeaderField: "User-Agent")
-        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
-
         do {
-            let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-                Diagnostics.log("Controllo aggiornamenti: HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0)")
+            let feedData = try await fetch(AppInfo.updateFeedURL, accept: "application/json")
+            let signatureData = try await fetch(AppInfo.updateFeedSignatureURL, accept: "text/plain")
+            guard let signature = String(data: signatureData, encoding: .utf8),
+                  UpdateFeedSignature.verify(feed: feedData, signatureBase64: signature,
+                                            publicKeyBase64: AppInfo.updateFeedPublicKey) else {
+                Diagnostics.log("Controllo aggiornamenti: firma del feed non valida")
                 return .failed
             }
-            let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
-            guard let version = ReleaseVersion.normalized(release.tagName) else {
-                Diagnostics.log("Controllo aggiornamenti: tag non riconosciuto")
+            let feed = try JSONDecoder().decode(SignedFeed.self, from: feedData)
+            guard feed.schema == 1,
+                  let version = ReleaseVersion.normalized(feed.version),
+                  let releaseURL = safeReleaseURL(feed.releaseURL) else {
+                Diagnostics.log("Controllo aggiornamenti: feed non riconosciuto")
                 return .failed
             }
             let current = AppInfo.version == "dev" ? "0.0.0" : AppInfo.version
-            if ReleaseVersion.isNewer(release.tagName, than: current) {
-                Diagnostics.log("Aggiornamento disponibile su GitHub: \(version)")
-                return .available(version: version, url: safeReleaseURL(release.htmlURL) ?? AppInfo.latestReleaseURL)
+            if ReleaseVersion.isNewer(feed.version, than: current) {
+                Diagnostics.log("Aggiornamento disponibile nel feed firmato: \(version)")
+                return .available(version: version, url: releaseURL)
             }
             return .upToDate(current: AppInfo.version)
         } catch {
             Diagnostics.log("Controllo aggiornamenti non riuscito: \(error.localizedDescription)")
             return .failed
         }
+    }
+
+    private func fetch(_ url: URL, accept: String) async throws -> Data {
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(accept, forHTTPHeaderField: "Accept")
+        request.setValue("Cornetta/\(AppInfo.version)", forHTTPHeaderField: "User-Agent")
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw NSError(domain: "CornettaUpdate", code: 1,
+                          userInfo: [NSLocalizedDescriptionKey: "HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0)"])
+        }
+        return data
     }
 
     /// L'URL apre solo una release del repository fork: il resto non viene mai passato al browser.

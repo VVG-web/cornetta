@@ -34,8 +34,9 @@ namespace Cornetta.App
     internal enum UpdateCheck { UpToDate, Available, Failed }
 
     /// <summary>
-    /// Controllo manuale delle release su GitHub. Non parte niente all'avvio e non c'è nessun timer:
-    /// la richiesta esiste solo dopo «Controlla gli aggiornamenti su GitHub…». Non scarica e non installa nulla.
+    /// Controllo manuale del feed firmato ospitato su GitHub Pages. Non parte niente all'avvio
+    /// e non c'è nessun timer. La firma ECDSA P-256 viene verificata prima di leggere la versione.
+    /// Non scarica e non installa nulla.
     /// </summary>
     internal sealed class UpdateService
     {
@@ -60,35 +61,32 @@ namespace Cornetta.App
             releaseUrl = AppInfo.LatestReleaseUrl;
             try
             {
-                using (var request = new HttpRequestMessage(HttpMethod.Get, AppInfo.LatestReleaseApiUrl))
+                byte[] feedBytes = await Fetch(AppInfo.UpdateFeedUrl, "application/json").ConfigureAwait(true);
+                byte[] signatureBytes = await Fetch(AppInfo.UpdateFeedSignatureUrl, "text/plain").ConfigureAwait(true);
+                string signature = Encoding.UTF8.GetString(signatureBytes);
+                if (!UpdateFeedSignature.Verify(feedBytes, signature, AppInfo.UpdateFeedPublicKey))
                 {
-                    request.Headers.UserAgent.ParseAdd("Cornetta/" + AppInfo.Version);
-                    request.Headers.Accept.ParseAdd("application/vnd.github+json");
-                    request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
-                    using (var response = await Client.SendAsync(request).ConfigureAwait(true))
-                    {
-                        if (!response.IsSuccessStatusCode)
-                        {
-                            Diagnostics.Log("Controllo aggiornamenti: HTTP " + (int)response.StatusCode);
-                            return UpdateCheck.Failed;
-                        }
-                        string json = await response.Content.ReadAsStringAsync().ConfigureAwait(true);
-                        Release? release = Parse(json);
-                        if (release?.TagName == null) return UpdateCheck.Failed;
-                        string? version = ReleaseVersion.Normalized(release.TagName);
-                        if (version == null)
-                        {
-                            Diagnostics.Log("Controllo aggiornamenti: tag non riconosciuto");
-                            return UpdateCheck.Failed;
-                        }
-                        string current = AppInfo.Version == "dev" ? "0.0.0" : AppInfo.Version;
-                        if (!ReleaseVersion.IsNewer(release.TagName, current)) return UpdateCheck.UpToDate;
-                        availableVersion = version;
-                        releaseUrl = SafeReleaseUrl(release.HtmlUrl);
-                        Diagnostics.Log("Aggiornamento disponibile su GitHub: " + version);
-                        return UpdateCheck.Available;
-                    }
+                    Diagnostics.Log("Controllo aggiornamenti: firma del feed non valida");
+                    return UpdateCheck.Failed;
                 }
+                SignedFeed? feed = Parse(feedBytes);
+                if (feed?.Version == null || feed.Schema != 1)
+                {
+                    Diagnostics.Log("Controllo aggiornamenti: feed non riconosciuto");
+                    return UpdateCheck.Failed;
+                }
+                string? version = ReleaseVersion.Normalized(feed.Version);
+                if (version == null)
+                {
+                    Diagnostics.Log("Controllo aggiornamenti: versione non riconosciuta");
+                    return UpdateCheck.Failed;
+                }
+                string current = AppInfo.Version == "dev" ? "0.0.0" : AppInfo.Version;
+                if (!ReleaseVersion.IsNewer(feed.Version, current)) return UpdateCheck.UpToDate;
+                availableVersion = version;
+                releaseUrl = SafeReleaseUrl(feed.ReleaseUrl);
+                Diagnostics.Log("Aggiornamento disponibile nel feed firmato: " + version);
+                return UpdateCheck.Available;
             }
             catch (Exception ex)
             {
@@ -97,14 +95,30 @@ namespace Cornetta.App
             }
         }
 
-        private static Release? Parse(string json)
+        private static async Task<byte[]> Fetch(string url, string accept)
+        {
+            using (var request = new HttpRequestMessage(HttpMethod.Get, url))
+            {
+                request.Headers.UserAgent.ParseAdd("Cornetta/" + AppInfo.Version);
+                request.Headers.Accept.ParseAdd(accept);
+                request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                using (var response = await Client.SendAsync(request).ConfigureAwait(true))
+                {
+                    if (!response.IsSuccessStatusCode)
+                        throw new HttpRequestException("HTTP " + (int)response.StatusCode + " for " + url);
+                    return await response.Content.ReadAsByteArrayAsync().ConfigureAwait(true);
+                }
+            }
+        }
+
+        private static SignedFeed? Parse(byte[] json)
         {
             try
             {
-                var serializer = new DataContractJsonSerializer(typeof(Release));
-                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(json)))
+                var serializer = new DataContractJsonSerializer(typeof(SignedFeed));
+                using (var stream = new MemoryStream(json))
                 {
-                    return serializer.ReadObject(stream) as Release;
+                    return serializer.ReadObject(stream) as SignedFeed;
                 }
             }
             catch (SerializationException) { return null; }
@@ -126,10 +140,11 @@ namespace Cornetta.App
         }
 
         [DataContract]
-        private sealed class Release
+        private sealed class SignedFeed
         {
-            [DataMember(Name = "tag_name")] public string? TagName { get; set; }
-            [DataMember(Name = "html_url")] public string? HtmlUrl { get; set; }
+            [DataMember(Name = "schema")] public int Schema { get; set; }
+            [DataMember(Name = "version")] public string? Version { get; set; }
+            [DataMember(Name = "release_url")] public string? ReleaseUrl { get; set; }
         }
     }
 
