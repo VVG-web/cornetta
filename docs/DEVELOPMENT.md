@@ -123,3 +123,10 @@ There is no automatic updater and no production deployment script. The static si
 `.github/workflows/pages.yml`. Build and verify locally, update and sign `site/update/feed.json`, then
 create a GitHub Release manually with the DMG or Windows installer. Users check the signed feed from the
 app menu and download from the GitHub Release page. Record SHA-256 fingerprints in the release notes.
+
+## Upstream review
+
+`scripts/upstream-review.py` compares the fork with `upstream/master` and prints an advisory report.
+The scheduled `Upstream review` workflow updates one issue every Monday. It classifies core changes,
+privacy/network changes, UI/docs, and unknown files. It never merges, cherry-picks, or pushes upstream
+code.

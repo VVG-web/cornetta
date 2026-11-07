@@ -10,6 +10,7 @@ based on the original [Cornetta](https://github.com/stellakamikaze/cornetta) by 
 - Privacy: no telemetry, no analytics, no cookies, no feedback server.
   Recordings and transcripts stay on the computer.
 - Updates: manual check against a signed feed on GitHub Pages. Nothing is downloaded or installed automatically.
+- Security review: [macOS Intel safety and uninstall](docs/SECURITY-REVIEW.md).
 - Stack: Swift and Core Audio process taps (`Sources/`), C# .NET Framework 4.8 with NAudio (`windows/`),
   static site (`site/`).
 - License: MIT. Interface text and code comments are in Italian.
@@ -43,6 +44,26 @@ sul Mac. Il sito in `site/` è statico e non usa Plausible, Telegram o altri ser
 
 Dettagli: [privacy in italiano](site/privacy/index.html) e
 [privacy in English](site/en/privacy/index.html).
+
+## Sicurezza e rimozione
+
+L'app non installa driver, kext, estensioni di sistema, launch agent o privilegiati. Usa un dispositivo
+audio aggregato privato e lo distrugge allo stop. La rimozione consiste nel chiudere l'app, disattivare
+facoltativamente l'avvio al login, spostare `Cornetta.app` nel Cestino e, se si vuole, cancellare le
+cartelle dati dell'utente. Il test eseguito su un Mac Intel con macOS 15.8.1 e la matrice macOS 14/15/26
+sono in [docs/SECURITY-REVIEW.md](docs/SECURITY-REVIEW.md).
+
+## Manutenzione upstream
+
+Il workflow `.github/workflows/upstream-review.yml` controlla l'originale una volta alla settimana e
+aggiorna una singola issue con un rapporto diviso in:
+
+- modifiche al core, candidate a un port mirato;
+- modifiche a privacy, rete, telemetria e aggiornamenti, da non portare automaticamente;
+- UI, documentazione e localizzazione, da rivedere prima del port.
+
+Non fa merge, cherry-pick o push automatici. Il rapporto è generato da
+`scripts/upstream-review.py`.
 
 ## Requisiti
 

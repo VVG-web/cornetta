@@ -1,0 +1,44 @@
+name: Upstream review
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: "upstream-review"
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/stellakamikaze/cornetta.git
+          git fetch --no-tags upstream master
+
+      - name: Build advisory report
+        run: python3 scripts/upstream-review.py --upstream-ref upstream/master > upstream-review.md
+
+      - name: Update one review issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create upstream-review --color 5319E7 --description "Selective upstream review" 2>/dev/null || true
+          number=$(gh issue list --label upstream-review --state open --limit 1 --json number --jq '.[0].number')
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --title "Upstream review" --body-file upstream-review.md
+            echo "Updated issue #$number"
+          else
+            gh issue create --title "Upstream review" --body-file upstream-review.md --label upstream-review
+          fi

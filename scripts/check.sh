@@ -17,7 +17,7 @@ require() {
   }
 }
 
-for tool in shellcheck swiftlint swiftformat swift python3 dotnet; do
+for tool in shellcheck swiftlint swiftformat swift python3 dotnet openssl; do
   require "$tool"
 done
 
