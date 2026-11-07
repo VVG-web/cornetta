@@ -56,7 +56,7 @@ sono in [docs/SECURITY-REVIEW.md](docs/SECURITY-REVIEW.md).
 ## Manutenzione upstream
 
 Il workflow `.github/workflows/upstream-review.yml` controlla l'originale una volta alla settimana e
-aggiorna una singola issue con un rapporto diviso in:
+pubblica nel riepilogo della run, e come artifact, un rapporto diviso in:
 
 - modifiche al core, candidate a un port mirato;
 - modifiche a privacy, rete, telemetria e aggiornamenti, da non portare automaticamente;

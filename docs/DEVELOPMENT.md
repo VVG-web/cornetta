@@ -127,6 +127,6 @@ app menu and download from the GitHub Release page. Record SHA-256 fingerprints 
 ## Upstream review
 
 `scripts/upstream-review.py` compares the fork with `upstream/master` and prints an advisory report.
-The scheduled `Upstream review` workflow updates one issue every Monday. It classifies core changes,
-privacy/network changes, UI/docs, and unknown files. It never merges, cherry-picks, or pushes upstream
-code.
+The scheduled `Upstream review` workflow publishes it in the Actions run summary and as an artifact every
+Monday. It classifies core changes, privacy/network changes, UI/docs, and unknown files. It never merges,
+cherry-picks, or pushes upstream code.
