@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -12,17 +11,10 @@ namespace Cornetta.App
 {
     internal static class AppInfo
     {
-        /// <summary>Indirizzo del servizio (feedback, download, aggiornamenti).</summary>
-        public const string ServiceUrl = "https://cornetta.stellakamikaze.org";
-        public const string FeedbackUrl = ServiceUrl + "/api/feedback";
-        public const string UpdateFeedUrl = ServiceUrl + "/windows/";
-
-        /// <summary>
-        /// Chiave pubblica ECDSA P-256 che firma il feed (releases.win.json.sig), in esadecimale: X||Y, 128 cifre.
-        /// Come si genera e dove sta la privata: docs/SERVIZIO.md, «Chiave del feed Windows». windows/tools/sign-feed.py
-        /// legge questa riga e la CI dei tag si ferma finché vale FeedSignature.Placeholder.
-        /// </summary>
-        public const string UpdateFeedPublicKey = "fe2cddcd251de956780221ed31e84f737dd6197acf21d8d1c815dcf20fe2dc0e7089662153861cf448a232696feb65f48358b14d04253125c9277ac810f4de63";
+        public const string GithubRepository = "VVG-web/cornetta-en";
+        public const string LatestReleaseUrl = "https://github.com/" + GithubRepository + "/releases/latest";
+        public const string LatestReleaseApiUrl = "https://api.github.com/repos/" + GithubRepository + "/releases/latest";
+        public const string NewIssueUrl = "https://github.com/" + GithubRepository + "/issues/new";
 
         public static string Version
         {
@@ -105,40 +97,6 @@ namespace Cornetta.App
             }
         }
 
-        public static FeedbackAppInfo FeedbackInfo(string? microphone) => new FeedbackAppInfo
-        {
-            Version = Version,
-            Build = Build,
-            Os = Os,
-            Arch = Arch,
-            Microphone = microphone ?? "",
-        };
-
-        /// <summary>Informazioni tecniche allegate al feedback. Niente audio, niente contenuti delle chiamate.</summary>
-        public static string DiagnosticsText(string? microphone)
-        {
-            var devices = AudioDevices.Describe();
-            var lines = new List<string>
-            {
-                "Cornetta " + Version + " (" + Build + ") · " + Os + " · " + Arch,
-                "App: " + ExecutablePath,
-                "Microfono: " + (microphone ?? devices.Input ?? "nessuno"),
-                "Uscita: " + (devices.Output ?? "nessuna"),
-            };
-            if (devices.GeneralInput != null && devices.GeneralInput != devices.Input)
-                lines.Add("Ingresso predefinito generale (non usato): " + devices.GeneralInput);
-            if (devices.GeneralOutput != null && devices.GeneralOutput != devices.Output)
-                lines.Add("Uscita predefinita generale (ascoltata anche lei): " + devices.GeneralOutput);
-            lines.Add("Permesso microfono: " + (MicrophonePrivacy.IsAllowed() ? "sì" : "no"));
-            lines.Add("App che usano il microfono: " + string.Join(", ", CallDetector.CallApps(MicrophoneUsage.Read()).Select(a => a.Name)));
-            lines.Add("Registrazioni: " + RecordingsDirectory);
-            lines.Add("");
-            lines.Add("--- ultime righe del log ---");
-            lines.AddRange(Diagnostics.Tail(120));
-            // Il nome utente nei percorsi non serve a capire un guasto (come sul Mac).
-            return PathPrivacy.Anonymize(string.Join(Environment.NewLine, lines),
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
-        }
     }
 
     /// <summary>Preferenze in HKCU\Software\Cornetta.</summary>
@@ -152,41 +110,10 @@ namespace Cornetta.App
             set => Set("ShowOverlay", value ? 1 : 0);
         }
 
-        /// <summary>Telemetria di funzionamento (vedi Telemetry): accesa di default, si spegne dal menu.</summary>
-        public static bool TelemetryEnabled
-        {
-            get => GetBool("TelemetryEnabled", true);
-            set => Set("TelemetryEnabled", value ? 1 : 0);
-        }
-
-        public static string TelemetryInstallId
-        {
-            get => GetString("TelemetryInstallId");
-            set => Set("TelemetryInstallId", value);
-        }
-
-        public static string TelemetryLastVersion
-        {
-            get => GetString("TelemetryLastVersion");
-            set => Set("TelemetryLastVersion", value);
-        }
-
         public static bool ProposeOnCall
         {
             get => GetBool("ProposeOnCall", true);
             set => Set("ProposeOnCall", value ? 1 : 0);
-        }
-
-        public static string FeedbackName
-        {
-            get => GetString("FeedbackName");
-            set => Set("FeedbackName", value);
-        }
-
-        public static string FeedbackEmail
-        {
-            get => GetString("FeedbackEmail");
-            set => Set("FeedbackEmail", value);
         }
 
         public static string Language
@@ -209,12 +136,6 @@ namespace Cornetta.App
                 }
                 catch (Exception) { return false; }
             }
-        }
-
-        /// <summary>Solo per le prove: un altro indirizzo per gli aggiornamenti (come CornettaFeedOverride sul Mac).</summary>
-        public static string? FeedOverride
-        {
-            get { string value = GetString("FeedOverride"); return value.Length > 0 ? value : null; }
         }
 
         public static (int X, int Y)? OverlayPosition

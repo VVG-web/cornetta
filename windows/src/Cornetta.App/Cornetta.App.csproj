@@ -1,8 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
     App per l'area di notifica. Gira su .NET Framework 4.8, già presente in Windows 10 (1903+) e 11:
-    il pacchetto pesa pochi MB, non installa runtime e non chiede permessi di amministratore.
-    Un'app .NET 8/10 self-contained supera i 60 MB e il Worker di Cloudflare accetta file fino a 25 MiB.
+    il pacchetto pesa pochi MB e non installa runtime.
   -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -44,7 +43,6 @@
     <EmbeddedResource Include="Assets\cornetta.ico" LogicalName="Cornetta.cornetta.ico" />
     <EmbeddedResource Include="Assets\tray-idle.ico" LogicalName="Cornetta.tray-idle.ico" />
     <EmbeddedResource Include="Assets\tray-recording.ico" LogicalName="Cornetta.tray-recording.ico" />
-    <EmbeddedResource Include="Assets\tray-update.ico" LogicalName="Cornetta.tray-update.ico" />
     <None Remove="Assets\icon.png" />
   </ItemGroup>
 </Project>

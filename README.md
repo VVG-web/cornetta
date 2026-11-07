@@ -1,81 +1,125 @@
 # Cornetta
 
-**Free, open-source call recorder for Mac, with a beta for Windows.** Cornetta records your voice from the microphone and the other people from system audio into one `.m4a` file, with any calling app: WhatsApp, FaceTime, Google Meet, Zoom, Microsoft Teams, Slack, Discord, browser calls. No account, no virtual audio driver, no subscription. On macOS 26 it also transcribes each call on the Mac, separating your voice from the others.
+**Free, open-source call recorder for Mac, with a beta for Windows.**
+This repository is the privacy-clean fork [`VVG-web/cornetta-en`](https://github.com/VVG-web/cornetta-en),
+based on the original [Cornetta](https://github.com/stellakamikaze/cornetta) by Federico Nejrotti.
 
-- Download: [cornetta.stellakamikaze.org](https://cornetta.stellakamikaze.org/en/) (macOS 14.4+, Apple Silicon and Intel · Windows 10 and 11, beta)
-- Homebrew: `brew install --cask stellakamikaze/tap/cornetta`
-- Privacy: recordings and transcripts never leave your computer. The app sends anonymous usage data that you can turn off: [what is sent](https://cornetta.stellakamikaze.org/en/privacy/)
-- Stack: Swift and Core Audio process taps (`Sources/`), C# .NET Framework 4.8 with NAudio and Velopack (`windows/`), Cloudflare Worker for the site, updates, feedback and telemetry (`worker/`)
-- License: MIT. Interface and code comments are in Italian.
+- Download: [GitHub Releases](https://github.com/VVG-web/cornetta-en/releases/latest)
+  (macOS 14.4+, Apple Silicon and Intel · Windows 10 and 11, beta)
+- Privacy: no telemetry, no analytics, no cookies, no feedback server.
+  Recordings and transcripts stay on the computer.
+- Updates: manual check against GitHub Releases. Nothing is downloaded or installed automatically.
+- Stack: Swift and Core Audio process taps (`Sources/`), C# .NET Framework 4.8 with NAudio (`windows/`),
+  static site (`site/`).
+- License: MIT. Interface text and code comments are in Italian.
 
 ---
 
-Registratore di chiamate gratuito per Mac. Registra in un solo file la tua voce dal microfono e la voce delle altre persone, con qualunque app: Meet, Zoom, Teams, WhatsApp, FaceTime, Slack, Discord, il browser.
+Registratore di chiamate gratuito per Mac. Registra in un solo file la tua voce dal microfono e la voce
+delle altre persone, con qualunque app: Meet, Zoom, Teams, WhatsApp, FaceTime, Slack, Discord, il browser.
 
-Cornetta vive nella barra dei menu. Un clic avvia la registrazione, un clic la ferma. Il file finisce in `~/Music/Cornetta/` con il nome `Chiamata AAAA-MM-GG HH.MM.m4a`.
+Cornetta vive nella barra dei menu. Un clic avvia la registrazione, un clic la ferma. Il file finisce in
+`~/Music/Cornetta/` con il nome `Chiamata AAAA-MM-GG HH.MM.m4a`.
 
-**Italiano o inglese.** Dal menu della cornetta, in **Lingua / Language**, scegli l'interfaccia. La scelta resta salvata; una nuova installazione segue la lingua di sistema e tutte le altre lingue usano l'italiano. Su Windows la stessa voce è nel menu dell'area di notifica.
+**Italiano o inglese.** Dal menu della cornetta, in **Lingua / Language**, scegli l'interfaccia.
+La scelta resta salvata; una nuova installazione segue la lingua di sistema e tutte le altre lingue usano
+l'italiano. Su Windows la stessa voce è nel menu dell'area di notifica.
+
+## Privacy e rete
+
+Questa versione non ha telemetria, analytics, cookie, identificativi di installazione o un server di
+feedback. L'app non apre connessioni in background.
+
+Le uniche connessioni possibili sono quelle avviate dall'utente:
+
+- **Controlla gli aggiornamenti su GitHub…** chiede a GitHub l'ultima release del repository fork.
+  La richiesta contiene la versione dell'app e un normale User-Agent, mai audio, testi o nomi di file.
+- **Feedback** apre una nuova segnalazione pubblica su GitHub nel browser. Non c'è nessun invio automatico.
+
+Audio e trascrizioni non lasciano mai il computer. La trascrizione usa il riconoscimento vocale di Apple
+sul Mac. Il sito in `site/` è statico e non usa Plausible, Telegram o altri servizi di analisi.
+
+Dettagli: [privacy in italiano](site/privacy/index.html) e
+[privacy in English](site/en/privacy/index.html).
 
 ## Requisiti
 
 - macOS 14.4 o successivo.
 - Mac con Apple Silicon o Intel (app universale).
+- Per lo sviluppo: Xcode completo o Command Line Tools, .NET SDK 10, Python 3 e un browser Chromium.
 
-## Installazione
+## Installazione macOS
 
-1. Apri `Cornetta.dmg` e trascina Cornetta nella cartella Applicazioni.
-2. Al primo avvio macOS blocca l'app, perché non è firmata da uno sviluppatore Apple registrato. Apri **Impostazioni di Sistema → Privacy e sicurezza**, scorri in fondo e premi **Apri comunque**.
-3. Alla prima registrazione Cornetta chiede due permessi. Concedili entrambi:
+1. Apri [GitHub Releases](https://github.com/VVG-web/cornetta-en/releases/latest) e scarica il DMG.
+2. Trascina Cornetta nella cartella Applicazioni.
+3. Al primo avvio macOS blocca l'app, perché il fork non ha una firma Apple notarizzata. Apri
+   **Impostazioni di Sistema → Privacy e sicurezza**, scorri in fondo e premi **Apri comunque**.
+4. Alla prima registrazione Cornetta chiede due permessi:
    - **Microfono**, per la tua voce;
    - **Registrazione audio di sistema**, per la voce degli altri.
 
-Se hai negato un permesso, riattivalo in **Impostazioni di Sistema → Privacy e sicurezza → Microfono** oppure **→ Registrazione schermo e audio di sistema**.
+Se hai negato un permesso, riattivalo in **Impostazioni di Sistema → Privacy e sicurezza → Microfono**
+oppure **→ Registrazione schermo e audio di sistema**.
 
 ## Uso
 
 - **Avvia registrazione** (⌘R): l'icona diventa un pallino rosso con il tempo trascorso.
 - **Ferma registrazione** (⌘R): il file viene chiuso e salvato.
 - **Apri cartella registrazioni**: apre `~/Music/Cornetta/` nel Finder.
+- **Controlla gli aggiornamenti su GitHub…**: confronta la versione installata con l'ultima release e apre
+  GitHub se ce n'è una nuova.
+- **Apri una segnalazione su GitHub…**: apre il browser sulla pagina delle issue del fork.
 
-Se a metà chiamata cambi microfono (per esempio colleghi le AirPods), Cornetta passa al nuovo microfono e continua sullo stesso file.
+Se a metà chiamata cambi microfono (per esempio colleghi le AirPods), Cornetta passa al nuovo microfono e
+continua sullo stesso file.
 
 ## Video dello schermo
 
-- **Registra lo schermo…**: macOS mostra il suo selettore. Scegli uno schermo, una finestra o un'app e il video parte. L'icona diventa un pallino rosso col tempo, e un piccolo pannello ha il pulsante **Ferma**.
-- Il video si salva già compresso in `~/Movies/Cornetta/` («Schermo 2026-11-03 12.30.mp4»): HEVC fino a 1920 px di lato e 30 fotogrammi al secondo, con audio AAC. Un'ora di lavoro a schermo pesa al massimo circa 1,9 GB; QuickTime ne scrive 4-6.
+- **Registra lo schermo…**: macOS mostra il suo selettore. Scegli uno schermo, una finestra o un'app e il
+  video parte.
+- Il video si salva già compresso in `~/Movies/Cornetta/` («Schermo 2026-11-03 12.30.mp4»): HEVC fino a
+  1920 px di lato e 30 fotogrammi al secondo, con audio AAC.
 - Nel sottomenu **Video dello schermo** scegli se registrare anche il microfono (da macOS 15) e l'audio del Mac.
-- Col selettore di sistema Cornetta non chiede il permesso Registrazione schermo: vede solo ciò che hai scelto, e macOS lo segnala con l'indicatore viola nella barra dei menu.
-- Il file è a frammenti di 10 secondi: se il Mac si spegne di colpo, il video resta leggibile fino all'ultimo frammento.
-- Durante il video audio del Mac e microfono stanno in due tracce; allo stop Cornetta le unisce in una, perché WhatsApp, Slack e i browser leggono solo la prima.
+- Il file è a frammenti di 10 secondi: se il Mac si spegne di colpo, il video resta leggibile fino
+  all'ultimo frammento.
 
-Prova da riga di comando: `open -n build/Cornetta.app --args --record-screen 30 --out esito.json [--no-mic] [--no-audio]`.
+Prova da riga di comando:
+`open -n build/Cornetta.app --args --record-screen 30 --out esito.json [--no-mic] [--no-audio]`.
 
 ## Trascrizione
 
-Da macOS 26 Cornetta trascrive ogni chiamata sul Mac, con il riconoscimento vocale di Apple (SpeechAnalyzer): niente esce dal computer.
+Da macOS 26 Cornetta trascrive ogni chiamata sul Mac, con il riconoscimento vocale di Apple (SpeechAnalyzer).
 
-- Durante la registrazione salva due tracce separate in `~/Library/Application Support/Cornetta/Tracce/`: «Tu» (microfono) e «Altri» (audio di sistema). Le voci si attribuiscono dalla traccia, senza indovinare.
-- Allo stop la trascrizione parte da sola. L'eco degli altoparlanti che rientra nel microfono viene tolta.
-- Il testo si salva in JSON (`~/Library/Application Support/Cornetta/Trascrizioni/`) e come `.md` accanto all'audio.
-- La finestra **Registrazioni** (⌘T dal menu) ha l'elenco, la ricerca, il testo diviso per voce e l'ascolto dal punto scelto.
+- Durante la registrazione salva due tracce separate in `~/Library/Application Support/Cornetta/Tracce/`:
+  «Tu» (microfono) e «Altri» (audio di sistema).
+- Allo stop la trascrizione parte da sola.
+- Il testo si salva in JSON (`~/Library/Application Support/Cornetta/Trascrizioni/`) e come `.md` accanto
+  all'audio.
+- La finestra **Registrazioni** (⌘T dal menu) ha l'elenco, la ricerca, il testo diviso per voce e l'ascolto
+  dal punto scelto.
 
-Prova da riga di comando: `build/Cornetta.app/Contents/MacOS/Cornetta --transcribe file.m4a [--tracks cartella]`. Libreria dimostrativa: `python3 site-src/make-demo-library.py /tmp/demo && open -n build/Cornetta.app --args --demo-library /tmp/demo`.
+Prova da riga di comando:
+`build/Cornetta.app/Contents/MacOS/Cornetta --transcribe file.m4a [--tracks cartella]`.
 
 ## Come funziona
 
-Cornetta usa i *process tap* di Core Audio (macOS 14.2+): legge tutto l'audio che il Mac riproduce, senza driver virtuali come BlackHole e senza registrare lo schermo. Il tap e il microfono stanno nello stesso dispositivo aggregato privato, quindi le due voci condividono lo stesso orologio e restano sincronizzate.
+Cornetta usa i *process tap* di Core Audio (macOS 14.2+): legge tutto l'audio che il Mac riproduce, senza
+driver virtuali come BlackHole e senza registrare lo schermo. Il tap e il microfono stanno nello stesso
+dispositivo aggregato privato, quindi le due voci condividono lo stesso orologio e restano sincronizzate.
 
-Il file è AAC stereo a 48 kHz. La tua voce sta al centro, l'audio della chiamata mantiene il suo stereo. Un limitatore evita la distorsione quando parlate insieme.
+Il file è AAC stereo a 48 kHz. La tua voce sta al centro, l'audio della chiamata mantiene il suo stereo.
+Un limitatore evita la distorsione quando parlate insieme.
 
-Durante la chiamata Cornetta non scrive ancora l'AAC: scrive file CAF in `~/Library/Application Support/Cornetta/In corso/`, che restano leggibili anche se il Mac si spegne o l'app si chiude di colpo. Allo stop li converte nel `.m4a` in `~/Music/Cornetta/` e svuota la cartella. Se all'avvio trova una cartella rimasta lì, recupera la registrazione interrotta e la mette in libreria. Lo stesso vale quando la registrazione si ferma per un errore del dispositivo audio: quello che era già registrato si salva e si trascrive.
+Durante la chiamata Cornetta scrive file CAF in `~/Library/Application Support/Cornetta/In corso/`, che
+restano leggibili anche se il Mac si spegne o l'app si chiude di colpo. Allo stop li converte nel `.m4a`
+in `~/Music/Cornetta/` e svuota la cartella.
 
 ## Compilare da sorgente
 
-Bastano i Command Line Tools di Xcode (`xcode-select --install`).
-
 ```bash
-scripts/test.sh          # test
-scripts/build-dmg.sh     # produce dist/Cornetta.dmg
+scripts/test.sh          # test macOS
+scripts/build-dmg.sh     # produce dist/Cornetta-<versione>.dmg
+./scripts/check.sh       # gate completo: lint, test, DMG, .NET, script, sito
 ```
 
 Per provare la cattura senza interfaccia:
@@ -84,107 +128,75 @@ Per provare la cattura senza interfaccia:
 open -W -n build/Cornetta.app --args --record 10 --out /tmp/prova.m4a --debug-tracks /tmp/prova
 ```
 
-Il comando scrive `/tmp/prova.m4a`, le tracce separate `mic.wav` e `system.wav`, e le statistiche in `/tmp/prova.m4a.json`. Con `--cycles 3` registra tre volte di seguito nello stesso processo.
-
-Se la registrazione resta muta, lancia la sonda e leggi il risultato:
-
-```bash
-open -W -n /Applications/Cornetta.app --args --probe /tmp/sonda.txt && cat /tmp/sonda.txt
-```
-
 Il log dell'app sta in `~/Library/Logs/Cornetta/cornetta.log`.
-
-## Limiti noti
-
-- L'app non è notarizzata da Apple: al primo avvio serve «Apri comunque» in Impostazioni › Privacy e sicurezza. È firmata con un certificato proprio, sempre lo stesso: gli aggiornamenti non chiedono di nuovo i permessi.
-- Con le AirPods come microfono la qualità della chiamata scende (profilo Bluetooth per le chiamate). Vale per qualunque registratore.
 
 ## Windows
 
-La versione Windows sta in `windows/`. Fa le stesse cose della versione Mac: icona nell'area di notifica, pannello durante la registrazione, avviso quando parte una chiamata, feedback, aggiornamenti automatici.
+La versione Windows sta in `windows/`. Fa le stesse cose della versione Mac: icona nell'area di notifica,
+pannello durante la registrazione, avviso quando parte una chiamata, rilevamento delle chiamate e
+registrazione dell'audio di sistema. Non ha aggiornamenti automatici.
 
 ### Installazione
 
-1. Scarica `CornettaSetup.exe` da <https://cornetta.stellakamikaze.org/windows/CornettaSetup.exe> e aprilo. Non servono permessi di amministratore.
-2. Al primo avvio Windows mostra «Windows ha protetto il PC», perché l'installer non è firmato. Premi **Ulteriori informazioni**, poi **Esegui comunque**.
-3. Cornetta compare nell'area di notifica, vicino all'orologio. Se non la vedi, apri la freccia `^` accanto all'orologio.
+1. Apri [GitHub Releases](https://github.com/VVG-web/cornetta-en/releases/latest) e scarica
+   `CornettaSetup.exe`. Non servono permessi di amministratore.
+2. Al primo avvio Windows mostra «Windows ha protetto il PC», perché l'installer non è firmato. Premi
+   **Ulteriori informazioni**, poi **Esegui comunque**.
+3. Cornetta compare nell'area di notifica, vicino all'orologio. Se non la vedi, apri la freccia `^`.
 
-Se il microfono resta muto, apri **Impostazioni → Privacy e sicurezza → Microfono** e attiva **Consenti alle app desktop di accedere al microfono**.
+Se il microfono resta muto, apri **Impostazioni → Privacy e sicurezza → Microfono** e attiva **Consenti
+alle app desktop di accedere al microfono**.
 
 ### Uso
 
-- **Avvia registrazione** (Ctrl+Alt+R da qualunque app): l'icona diventa un pallino rosso e compare il pannello in alto a destra.
-- **Ferma registrazione** (di nuovo Ctrl+Alt+R, oppure **Ferma** nel pannello): il file viene chiuso e salvato.
+- **Avvia registrazione** (Ctrl+Alt+R): l'icona diventa un pallino rosso e compare il pannello in alto a destra.
+- **Ferma registrazione** (di nuovo Ctrl+Alt+R, oppure **Ferma** nel pannello).
 - I file finiscono in `Musica\Cornetta\` con il nome `Chiamata AAAA-MM-GG HH.MM.m4a`.
 
 Il log sta in `%LOCALAPPDATA%\Cornetta\cornetta.log`.
 
-### Come funziona
-
-Cornetta legge l'audio di sistema con il loopback WASAPI e la tua voce dal microfono, usando il microfono che Windows assegna alle comunicazioni, il generale solo se manca. Ascolta l'uscita delle comunicazioni e, in aggiunta, quella generale: sono quelle di Teams, Zoom, WhatsApp e del browser in chiamata. Porta le due sorgenti a 48 kHz stereo e le mette su una linea del tempo comune, decisa da un orologio unico. Il loopback non manda pacchetti quando nessuno suona: Cornetta suona silenzio sull'uscita e riempie di zeri i buchi rimasti, così le due voci restano allineate. Il file è AAC 160 kbit/s con Media Foundation. Su Windows N senza Media Feature Pack Cornetta registra in WAV.
-
-Durante la chiamata Cornetta scrive un WAV di lavoro in `%LOCALAPPDATA%\Cornetta Dati\In corso\`, fuori dalla cartella che Velopack sostituisce agli aggiornamenti. Allo stop lo converte e svuota la cartella. Se l'app si chiude di colpo, al prossimo avvio recupera la registrazione interrotta.
-
-Le chiamate si riconoscono dalle sessioni audio attive sui microfoni e dal registro di Windows (`ConsentStore\microphone`): quando un'app diversa da Cornetta usa il microfono da almeno 4 secondi, compare l'avviso. Su Windows 24H2 il registro può restare fermo, perché Windows annota l'uso in un database che solo il sistema legge: per questo contano le sessioni audio.
-
 ### Compilare e provare
 
-Serve il .NET SDK 10. L'app è per .NET Framework 4.8, già presente in Windows 10 e 11: il pacchetto pesa pochi MB e non installa runtime.
+Serve il .NET SDK 10. L'app è per .NET Framework 4.8, già presente in Windows 10 e 11.
 
 ```bash
 cd windows
 dotnet test Cornetta.Windows.sln                 # test (anche su Mac e Linux)
-dotnet build Cornetta.Windows.sln -c Release     # compila anche fuori da Windows, per controllo
+dotnet build Cornetta.Windows.sln -c Release     # compila anche fuori da Windows
 ```
 
 Su un PC Windows:
 
 ```bat
-Cornetta.exe --selftest                          :: dispositivi, encoder AAC, file di prova sintetico
-Cornetta.exe --record 10 --out C:\prova.m4a      :: 10 secondi di cattura vera, statistiche in C:\prova.m4a.json
+Cornetta.exe --selftest
+Cornetta.exe --record 10 --out C:\prova.m4a
 ```
 
-Il CI (`.github/workflows/windows.yml`) compila, esegue i test con .NET 10 e .NET Framework 4.8 e lancia `--selftest`. Poi controlla che il selftest sappia fallire (`--selftest-poison`, deve uscire con 1 e dire perché), disegna i pannelli (`--render-ui`) e avvia l'app vera (`--smoke-tray`): selftest e pannelli non passano dal costruttore dell'app, e un crash all'avvio arriverebbe agli utenti. Infine impacchetta con Velopack e prova l'installer. Le build di prova (versione 0.0.<run>) non scaricano il feed pubblicato, perché Velopack rifiuta una versione più bassa.
+Il CI (`.github/workflows/windows.yml`) compila, esegue i test con .NET 10 e .NET Framework 4.8, lancia
+`--selftest`, `--selftest-poison`, `--render-ui`, `--smoke-tray`, impacchetta con Velopack e prova
+l'installer.
 
 ### Pubblicare una versione Windows
 
-```bash
-git tag win-v0.3.0 && git push origin win-v0.3.0   # il CI impacchetta la versione 0.3.0
-gh run watch                                       # aspetta la run verde
-windows/tools/publish.sh 0.3.0                     # copia in worker/public/windows/, deploy, verifica
-```
+Il CI produce `CornettaSetup.exe` e gli artifact dell'installer. La release GitHub si crea manualmente
+con `gh release create` e i file prodotti; non esistono feed di aggiornamento automatico né script che
+pubblichino su un server esterno.
 
-Le app installate vedono la versione nuova all'avvio e ogni 4 ore.
+## Sito statico
 
-### Limiti noti su Windows
+Le pagine sono in `site/`. Non c'è un Worker, un database, un servizio di analytics o un endpoint API.
+Il sito può essere pubblicato su qualunque hosting statico. I pulsanti di download puntano direttamente a
+GitHub Releases.
 
-- L'installer non è firmato: SmartScreen chiede «Ulteriori informazioni → Esegui comunque».
-- Cornetta registra il microfono che Windows assegna alle comunicazioni e ascolta sia l'uscita delle comunicazioni sia quella generale. Musica, notifiche e altri suoni sull'uscita generale entrano quindi nel file. Un'app di chiamata impostata a mano su un terzo dispositivo resta fuori.
+## Notarizzazione Apple
 
-## Pubblicare il sito
-
-```bash
-scripts/deploy-site.sh       # pagine e Worker, senza versioni nuove: da Mac o da Windows
-```
-
-`wrangler deploy` pubblica tutta `worker/public`, ma DMG, delta, `latest.json` e feed Windows non stanno nel repo. Per questo `scripts/deploy-site.sh`, `scripts/release.sh` e `windows/tools/publish.sh` partono da `scripts/sync-published.py`, che scarica dal sito i file pubblicati. Prima del deploy `--check` ferma tutto se in locale manca un file che il sito serve, dopo il deploy `--verify` controlla che il sito li serva ancora, uguali a quelli locali. Una release del Mac non toglie così Windows dal sito, e viceversa. Prima ancora `scripts/lib/guardia.sh` ferma i tre script se il repo non è pulito e allineato a GitHub, se un test del Worker o degli script fallisce, o se una migration D1 non è applicata.
-
-## Notarizzazione Apple (installazione senza «Apri comunque»)
-
-Oggi Cornetta è firmata con un certificato locale: macOS la blocca al primo avvio e chiede «Apri comunque». Con la notarizzazione Apple si apre con un doppio clic, come un'app dell'App Store. Serve l'[Apple Developer Program](https://developer.apple.com/programs/) (99 $ l'anno).
-
-1. Iscriviti al programma come persona fisica. L'app mostrerà il tuo nome come sviluppatore.
-2. Crea un certificato «Developer ID Application» e importalo nel portachiavi.
-3. Salva le credenziali di notarizzazione, con una password specifica per app creata su appleid.apple.com:
-   `xcrun notarytool store-credentials cornetta-notary --apple-id <email> --team-id <TEAMID>`
-4. Pubblica come sempre, indicando certificato e profilo:
-   `SIGN_IDENTITY="Developer ID Application: <Nome> (<TEAMID>)" NOTARY_PROFILE=cornetta-notary scripts/release.sh X.Y.Z "novità"`
-
-Lo script attiva il runtime rinforzato, notarizza app e DMG e vi aggancia il ticket (`stapler`). Al primo aggiornamento dopo il passaggio, macOS chiede una volta sola di nuovo i due permessi, perché cambia il certificato.
+Oggi il fork è firmato ad-hoc: macOS lo blocca al primo avvio e chiede «Apri comunque». Con una firma
+Apple notarizzata si apre con un doppio clic. Serve l'[Apple Developer Program](https://developer.apple.com/programs/).
 
 ## Nota legale
 
-In Italia registrare una conversazione a cui partecipi è lecito per uso personale. Diffonderla senza il consenso delle altre persone non lo è. In altri paesi le regole cambiano: informati prima di registrare.
+In Italia registrare una conversazione a cui partecipi è lecito per uso personale. Diffonderla senza il
+consenso delle altre persone non lo è. In altri paesi le regole cambiano: informati prima di registrare.
 
 ## Licenza
 

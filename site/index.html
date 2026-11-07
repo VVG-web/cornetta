@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cornetta: registra le chiamate dal Mac e da Windows, gratis</title>
+<meta name="description" content="Cornetta registra le chiamate dal Mac con qualunque app. La tua voce e quella degli altri nello stesso file, con la trascrizione locale. Gratis, open source, senza account. Anche per Windows, in beta.">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="author" content="VVG-web">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/img/cornetta-icon.webp" type="image/webp">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/site.css" as="style">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Vai al contenuto</a>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="logo" href="/" aria-label="Cornetta, pagina iniziale"><img src="/img/cornetta-icon.webp" alt="" width="30" height="30">Cornetta</a>
+    <ul>
+      <li><a href="#funzioni">Funzioni</a></li>
+      <li><a href="#privacy">Privacy</a></li>
+      <li><a href="#installazione">Installazione</a></li>
+      <li><a href="#domande">Domande</a></li>
+      <li><a href="/en/" hreflang="en" lang="en">English</a></li>
+    </ul>
+    <a class="btn btn-primary" href="https://github.com/VVG-web/cornetta-en/releases/latest" data-download-primary><span>Scarica</span></a>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero" aria-labelledby="titolo">
+    <div class="wrap">
+      <h1 id="titolo">Registra le chiamate dal <span data-os="mac">Mac.</span><span data-os="windows" hidden>PC.</span></h1>
+      <p class="lede" data-os="mac">Con <strong>qualunque app</strong>: WhatsApp, FaceTime, Meet, Zoom, Teams. La tua voce e quella degli altri in un solo file, con la <strong>trascrizione locale</strong>. <strong>Gratis</strong> e open source, senza account.</p>
+      <p class="lede" data-os="windows" hidden>Con <strong>qualunque app</strong>: WhatsApp, Meet, Zoom, Teams. La tua voce e quella degli altri in un solo file. <strong>Gratis</strong> e open source, senza account.</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="https://github.com/VVG-web/cornetta-en/releases/latest" data-download-primary>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10m0 0-4-4m4 4 4-4M4 16.5h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Scarica per Mac</span>
+        </a>
+        <a class="btn btn-secondary" href="#installazione">Come si installa</a>
+      </div>
+      <p class="meta meta-alt" data-os="mac" data-windows>Hai un PC? <a href="https://github.com/VVG-web/cornetta-en/releases/latest" data-download-windows>Scarica Cornetta per Windows</a>, in beta.</p>
+      <p class="meta meta-alt" data-os="windows" hidden>Hai un Mac? <a href="https://github.com/VVG-web/cornetta-en/releases/latest">Scarica Cornetta per Mac</a>.</p>
+      <div class="shots">
+        <img class="shot shot-overlay" src="/img/overlay.webp" alt="Pannello di registrazione di Cornetta con tempo, livelli delle voci e pulsante Ferma." width="476" height="137">
+        <img class="shot shot-call" src="/img/call.webp" alt="Avviso di Cornetta: chiamata in corso, con i pulsanti Non ora e Registra." width="436" height="168">
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="funzioni" aria-labelledby="funzioni-titolo">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="funzioni-titolo">Un file, due voci, nessun cloud.</h2>
+        <p class="intro">Cornetta registra il microfono e l'audio della chiamata sul computer, senza driver audio e senza caricare niente online.</p>
+      </div>
+      <ul class="details">
+        <li><h3>Qualunque app</h3><p>WhatsApp, FaceTime, Google Meet, Zoom, Teams, Slack, Discord, Skype o il browser. Non serve configurare nulla.</p></li>
+        <li><h3>La tua voce e quella degli altri</h3><p>Microfono e audio di sistema finiscono in un solo file <strong>.m4a</strong>, con un limitatore che evita la distorsione quando parlate insieme.</p></li>
+        <li><h3>Trascrizione locale</h3><p>Su macOS 26 o successivo la trascrizione usa il riconoscimento vocale di Apple e resta sul Mac. Nessun audio o testo viene inviato a un server.</p></li>
+        <li><h3>Ripresa dopo un crash</h3><p>Durante la chiamata Cornetta scrive file di lavoro recuperabili. Se l'app si chiude di colpo, la registrazione viene recuperata al prossimo avvio.</p></li>
+        <li><h3>Apple Silicon e Intel</h3><p>Un'app universale per macOS 14.4 o successivo. La versione Windows 10 e 11 è in beta e si installa senza permessi di amministratore.</p></li>
+        <li><h3>Gratis e open source</h3><p>Nessun abbonamento, nessuna pubblicità, nessun account. Il codice è pubblico <a href="https://github.com/VVG-web/cornetta-en">su GitHub</a>, con licenza MIT.</p></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section section-soft" id="privacy" aria-labelledby="privacy-titolo">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="privacy-titolo">Nessuna telemetria. Nessun tracciamento.</h2>
+        <p class="intro">Questa versione non manda dati di funzionamento, non usa analytics e non ha un server di feedback.</p>
+      </div>
+      <ul class="details">
+        <li><h3>Registrazioni e trascrizioni</h3><p>Restano nella cartella del computer. Non vengono mai caricate online.</p></li>
+        <li><h3>Controllo aggiornamenti</h3><p>Solo quando premi «Controlla gli aggiornamenti su GitHub». La richiesta va a GitHub e non contiene audio, testi o nomi di file. Cornetta non installa aggiornamenti da sola.</p></li>
+        <li><h3>Feedback</h3><p>Il pulsante apre una segnalazione pubblica su GitHub nel browser. Non c'è nessun invio automatico e nessun dato viene raccolto dall'app.</p></li>
+        <li><h3>Nessun cookie</h3><p>Il sito è statico: non usa cookie, Plausible, Telegram o altri servizi di analisi.</p></li>
+      </ul>
+      <p><a href="/privacy/">Leggi tutti i dettagli sulla privacy</a>.</p>
+    </div>
+  </section>
+
+  <section class="section" id="installazione" aria-labelledby="installazione-titolo">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="installazione-titolo">Installala in <span data-os="mac">due minuti</span><span data-os="windows" hidden>tre passi</span>.</h2>
+        <p class="intro">Il download e le note di ogni versione stanno su GitHub Releases.</p>
+      </div>
+      <ol class="steps" data-os="mac">
+        <li><h3>Scarica e trascina</h3><p>Apri la pagina delle release, scarica il DMG e trascina Cornetta nella cartella Applicazioni.</p></li>
+        <li><h3>Sblocca il primo avvio</h3><p>macOS blocca le app non notarizzate. Apri <strong>Impostazioni di Sistema › Privacy e sicurezza</strong> e premi <span class="key">Apri comunque</span>.</p></li>
+        <li><h3>Dai i due permessi</h3><p>Alla prima registrazione concedi <strong>Microfono</strong> e <strong>Registrazione audio di sistema</strong>.</p></li>
+      </ol>
+      <ol class="steps" data-os="windows" hidden>
+        <li><h3>Scarica e apri</h3><p>Scarica <strong>CornettaSetup.exe</strong> dalla pagina delle release. Non servono permessi di amministratore.</p></li>
+        <li><h3>Sblocca il primo avvio</h3><p>Se Windows mostra «Windows ha protetto il PC», premi <span class="key">Ulteriori informazioni</span> e poi <span class="key">Esegui comunque</span>.</p></li>
+        <li><h3>Cercala vicino all'orologio</h3><p>Cornetta compare nell'area di notifica. Se non la vedi, apri la freccia <span class="key">^</span>.</p></li>
+      </ol>
+      <p class="meta"><a href="https://github.com/VVG-web/cornetta-en/releases/latest">Apri GitHub Releases per scaricare l'ultima versione</a>.</p>
+    </div>
+  </section>
+
+  <section class="section section-soft" id="domande" aria-labelledby="domande-titolo">
+    <div class="wrap">
+      <div class="section-head center"><h2 id="domande-titolo">Domande frequenti</h2></div>
+      <div class="faq">
+        <details><summary>Cornetta è gratis?</summary><div class="answer"><p>Sì. Gratuita, senza account, senza abbonamenti e senza pubblicità.</p></div></details>
+        <details><summary>Con quali app funziona?</summary><div class="answer"><p>Con qualunque app che usa il microfono e l'audio del computer: WhatsApp, FaceTime, Google Meet, Zoom, Microsoft Teams, Slack, Discord, Skype e le chiamate dal browser.</p></div></details>
+        <details><summary>Cornetta raccoglie dati?</summary><div class="answer"><p>No. Questa versione non ha telemetria, analytics, cookie o un server di feedback. L'unica connessione possibile è quella che avvii tu: il controllo manuale delle release su GitHub o l'apertura di una segnalazione su GitHub.</p><p>Audio e trascrizioni non lasciano mai il computer.</p></div></details>
+        <details><summary>Gli aggiornamenti sono automatici?</summary><div class="answer"><p>No. Dal menu scegli <strong>Controlla gli aggiornamenti su GitHub…</strong>: Cornetta confronta la versione installata con l'ultima release e, se ce n'è una nuova, apre la pagina GitHub per scaricarla. Non scarica e non installa nulla da sola.</p></div></details>
+        <details><summary>Dove finiscono le registrazioni?</summary><div class="answer"><p>Nella cartella <strong>Musica › Cornetta</strong>, in formato .m4a (AAC, 48 kHz, stereo), con data e ora nel nome. Restano sul tuo computer.</p></div></details>
+        <details><summary>La trascrizione usa internet?</summary><div class="answer"><p>No. Su macOS 26 o successivo usa il riconoscimento vocale di Apple sul Mac. Il sistema può scaricare una volta il modello della lingua, ma il contenuto della chiamata non viene inviato a Cornetta.</p></div></details>
+        <details><summary>È legale registrare una chiamata?</summary><div class="answer"><p>In Italia registrare una conversazione a cui partecipi è lecito per uso personale. Diffondere la registrazione senza il consenso delle altre persone non lo è. In altri paesi le regole cambiano: informati prima di registrare.</p></div></details>
+        <details><summary>Funziona su iPhone o Android?</summary><div class="answer"><p>No. iOS non dà a nessuna app l'audio delle chiamate, e Android lo blocca per le app normali dalla versione 10. Cornetta funziona sul computer.</p></div></details>
+        <details><summary>Perché macOS dice che non può verificare lo sviluppatore?</summary><div class="answer"><p>Il fork non ha una firma Apple notarizzata. Al primo avvio apri <strong>Impostazioni di Sistema › Privacy e sicurezza</strong> e premi <span class="key">Apri comunque</span>. Serve una volta sola.</p></div></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="closing" aria-labelledby="chiusura-titolo">
+    <div class="wrap">
+      <img src="/img/cornetta-icon.webp" alt="" width="96" height="96" loading="lazy">
+      <h2 id="chiusura-titolo">La prossima chiamata, registrala.</h2>
+      <p data-os="mac">Gratis, per Mac. Due minuti per installarla.</p>
+      <p data-os="windows" hidden>Gratis, per Windows, in beta. Si installa senza permessi di amministratore.</p>
+      <a class="btn btn-primary" href="https://github.com/VVG-web/cornetta-en/releases/latest" data-download-primary>
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10m0 0-4-4m4 4 4-4M4 16.5h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Scarica per Mac</span>
+      </a>
+      <p class="meta">macOS 14.4 o successivo · Windows 10 e 11, beta</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>Fork mantenuto da <a href="https://github.com/VVG-web/cornetta-en">VVG-web</a>. Cornetta nasce dal progetto di <a href="https://github.com/stellakamikaze/cornetta">Federico Nejrotti</a>.<small>Le registrazioni restano sul tuo computer. Nessuna telemetria, nessun cookie. <a href="/privacy/">Privacy</a> · <a href="https://github.com/VVG-web/cornetta-en">Codice</a></small></div>
+    <ul>
+      <li><a href="#funzioni">Funzioni</a></li>
+      <li><a href="#privacy">Privacy</a></li>
+      <li><a href="#installazione">Installazione</a></li>
+      <li><a href="#domande">Domande</a></li>
+      <li><a href="/en/" hreflang="en" lang="en">English</a></li>
+    </ul>
+  </div>
+</footer>
+<script src="/assets/site.js" defer></script>
+</body>
+</html>

@@ -18,14 +18,11 @@ namespace Cornetta.App
     /// </summary>
     internal sealed class TrayApp : ApplicationContext
     {
-        private static readonly TimeSpan UpdateInterval = TimeSpan.FromHours(4);
-
         private readonly NotifyIcon tray;
         private readonly ContextMenuStrip menu = new ContextMenuStrip();
         private readonly Control invoker = new Control();
         private readonly Timer meterTimer = new Timer { Interval = 100 };
         private readonly Timer callTimer = new Timer { Interval = 2000 };
-        private readonly Timer updateTimer = new Timer { Interval = (int)UpdateInterval.TotalMilliseconds };
         private readonly CallMonitor calls = new CallMonitor();
         private readonly UpdateService updates = new UpdateService();
         private readonly GlobalHotkey hotkey;
@@ -47,9 +44,7 @@ namespace Cornetta.App
         private NoticeForm? notice;
         private Func<NoticeForm>? noticeFactory;
         private Timer? noticeTimeout;
-        private FeedbackForm? feedback;
-        private string? pendingUpdateNotice;
-        private bool installing;
+        private bool checkingUpdates;
 
         public TrayApp(bool firstRun)
         {
@@ -65,17 +60,10 @@ namespace Cornetta.App
             meterTimer.Tick += (_, __) => Tick();
             callTimer.Tick += (_, __) => PollCalls();
             callTimer.Start();
-            updateTimer.Tick += async (_, __) => await CheckUpdates(manual: false);
-            updateTimer.Start();
             AppLanguageSettings.LanguageChanged += RelayToOpenWindows;
             // Spegnimento, disconnessione e sospensione: il file va chiuso prima, o resta illeggibile.
             SystemEvents.SessionEnding += OnSessionEnding;
             SystemEvents.PowerModeChanged += OnPowerModeChanged;
-
-            // Un controllo all'avvio, oltre a quelli ogni 4 ore: chi apre l'app scopre subito la novità.
-            var startupCheck = new Timer { Interval = 5000 };
-            startupCheck.Tick += async (_, __) => { startupCheck.Stop(); startupCheck.Dispose(); await CheckUpdates(manual: false); };
-            startupCheck.Start();
 
             if (firstRun)
             {
@@ -128,12 +116,6 @@ namespace Cornetta.App
         private void BuildMenu()
         {
             menu.Items.Clear();
-            string? version = updates.AvailableVersion;
-            if (version != null)
-            {
-                Add(L10n.Format(L10nKey.MenuUpdateInstall, version), () => InstallUpdate());
-                menu.Items.Add(new ToolStripSeparator());
-            }
             var toggle = Add(L10n.Text(IsRecording ? L10nKey.MenuRecordStop : L10nKey.MenuRecordStart), Toggle);
             if (hotkey.Registered) toggle.ShortcutKeyDisplayString = "Ctrl+Alt+R";
             toggle.Enabled = !busy;
@@ -160,9 +142,7 @@ namespace Cornetta.App
             overlayItem.Checked = Settings.ShowOverlay;
             var proposeItem = Add(L10n.Text(L10nKey.MenuPropose), () => Settings.ProposeOnCall = !Settings.ProposeOnCall);
             proposeItem.Checked = Settings.ProposeOnCall;
-            var telemetryItem = Add(L10n.Text(L10nKey.MenuTelemetry), () => Telemetry.IsEnabled = !Telemetry.IsEnabled);
-            telemetryItem.Checked = Telemetry.IsEnabled;
-            Add(L10n.Text(L10nKey.MenuUpdates), async () => await CheckUpdates(manual: true));
+            Add(L10n.Text(L10nKey.MenuUpdates), async () => await CheckUpdates());
             var languageItem = new ToolStripMenuItem(L10n.Text(L10nKey.MenuLanguage));
             foreach (AppLanguage language in new[] { AppLanguage.Italian, AppLanguage.English })
             {
@@ -201,11 +181,6 @@ namespace Cornetta.App
                 tray.Icon = TrayIcons.Recording;
                 SetTrayText(L10n.Format(L10nKey.WindowsTrayRecordingStatus, ElapsedText));
             }
-            else if (updates.AvailableVersion != null)
-            {
-                tray.Icon = TrayIcons.Update;
-                SetTrayText(L10n.Text(L10nKey.WindowsTrayUpdateStatus));
-            }
             else
             {
                 tray.Icon = TrayIcons.Idle;
@@ -230,12 +205,6 @@ namespace Cornetta.App
         private async Task Start()
         {
             if (IsRecording || busy) return;
-            if (installing)
-            {
-                // L'aggiornamento riavvia l'app: una registrazione partita adesso verrebbe troncata.
-                tray.ShowBalloonTip(5000, "Cornetta", L10n.Text(L10nKey.WindowsTrayInstalling), ToolTipIcon.Info);
-                return;
-            }
             busy = true;
             message = null;
             CloseNotice();
@@ -255,7 +224,6 @@ namespace Cornetta.App
             }
             catch (Exception ex)
             {
-                Telemetry.Send("registrazione", "errore", TelemetryPayload.ErrorCode(ex, "avvio"));
                 Diagnostics.Log("Avvio registrazione non riuscito: " + ex.Message);
                 message = L10n.Text(L10nKey.WindowsTrayStartError);
                 busy = false;
@@ -307,7 +275,6 @@ namespace Cornetta.App
             }
             catch (Exception ex)
             {
-                Telemetry.Send("registrazione", "errore", TelemetryPayload.ErrorCode(ex, "stop"));
                 Diagnostics.Log("Stop non riuscito: " + ex.Message);
             }
             finally
@@ -319,20 +286,13 @@ namespace Cornetta.App
             // File.Exists fuori dal thread dell'interfaccia: la cartella può stare su un disco di rete o su OneDrive.
             var save = Task.Run(() => current.SaveRecording());
             saving = save;
-            _ = save.ContinueWith(t => OnUi(() => SaveFinished(current, t, stats)));
+            _ = save.ContinueWith(t => OnUi(() => SaveFinished(current, t)));
         }
 
-        private void SaveFinished(Recorder current, Task<bool> save, RecordingStats? stats)
+        private void SaveFinished(Recorder current, Task<bool> save)
         {
             if (saving == save) saving = null;
             bool saved = save.Status == TaskStatus.RanToCompletion && save.Result;
-            if (stats != null)
-            {
-                if (current.SaveError != null)
-                    Telemetry.Send("registrazione", "errore", TelemetryPayload.ErrorCode(current.SaveError, "salvataggio"), stats.Seconds);
-                else
-                    Telemetry.Send("registrazione", "ok", seconds: stats.Seconds);
-            }
             if (saved) lastFile = current.OutputPath;
             // Una registrazione nuova partita nel frattempo tiene il suo stato: niente messaggio né avviso sopra la chiamata.
             if (IsRecording || busy) return;
@@ -348,18 +308,11 @@ namespace Cornetta.App
                 message = L10n.Text(L10nKey.WindowsTrayNotSaved);
                 tray.ShowBalloonTip(8000, "Cornetta", L10n.Text(L10nKey.WindowsTrayNotSaved), ToolTipIcon.Warning);
             }
-            if (pendingUpdateNotice != null)
-            {
-                string version = pendingUpdateNotice;
-                pendingUpdateNotice = null;
-                AnnounceUpdate(version);
-            }
         }
 
         private void HandleFailure(Recorder failed, string text)
         {
             if (recorder != failed) return;
-            Telemetry.Send("registrazione", "errore", "interrotta", (DateTime.UtcNow - startedAt).TotalSeconds);
             lastFile = failed.OutputPath;
             Finish();
             message = text;
@@ -507,77 +460,36 @@ namespace Cornetta.App
 
         // MARK: - Aggiornamenti
 
-        private async Task CheckUpdates(bool manual)
+        private async Task CheckUpdates()
         {
-            // Durante l'installazione un controllo potrebbe cambiare l'aggiornamento scelto: si salta.
-            if (installing) return;
-            var result = await updates.CheckAsync();
-            UpdateTrayIcon();
-            switch (result)
-            {
-                case UpdateCheck.Found:
-                    AnnounceUpdate(updates.AvailableVersion!);
-                    break;
-                case UpdateCheck.UpToDate when manual:
-                tray.ShowBalloonTip(5000, "Cornetta",
-                    L10n.Format(L10nKey.WindowsTrayUpToDate, AppInfo.Version), ToolTipIcon.Info);
-                    break;
-                case UpdateCheck.NotInstalled when manual:
-                tray.ShowBalloonTip(5000, "Cornetta", L10n.Text(L10nKey.WindowsTrayInstalledOnly), ToolTipIcon.Info);
-                    break;
-                case UpdateCheck.Failed when manual:
-                tray.ShowBalloonTip(5000, "Cornetta", L10n.Text(L10nKey.WindowsTrayUpdateCheckFailed), ToolTipIcon.Warning);
-                    break;
-            }
-        }
-
-        private void AnnounceUpdate(string version)
-        {
-            // Durante una registrazione l'avviso aspetta lo stop: niente distrazioni in chiamata.
-            if (IsRecording)
-            {
-                pendingUpdateNotice = version;
-                return;
-            }
-            if (notice?.Kind == "update" || installing) return;
-            ShowLocalizedNotice(() => new NoticeForm("update", "", Theme.Blue,
-                L10n.Text(L10nKey.NoticeUpdateTitle),
-                L10n.Format(L10nKey.NoticeUpdateMessage, version),
-                L10n.Text(L10nKey.NoticeUpdateNow), L10n.Text(L10nKey.NoticeUpdateLater),
-                () => { CloseNotice(); InstallUpdate(); },
-                CloseNotice));
-            SystemSounds.Asterisk.Play();
-        }
-
-        private async void InstallUpdate()
-        {
-            if (installing) return;
-            if (IsRecording)
-            {
-                // Non si interrompe una chiamata: l'avviso torna appena la registrazione finisce.
-                pendingUpdateNotice = updates.AvailableVersion;
-                tray.ShowBalloonTip(5000, "Cornetta", L10n.Text(L10nKey.WindowsTrayUpdateWaiting), ToolTipIcon.Info);
-                return;
-            }
-            installing = true;
-                SetTrayText(L10n.Text(L10nKey.WindowsTrayUpdateDownloading));
+            if (checkingUpdates) return;
+            checkingUpdates = true;
             try
             {
-                // L'aggiornamento riavvia l'app: la conversione appena partita finisce prima.
-                if (saving != null) await saving;
-                await updates.InstallAsync(
-                    percent => invoker.BeginInvoke(new Action(() =>
-                        SetTrayText(L10n.Format(L10nKey.WindowsTrayUpdateProgress, percent)))),
-                    () => { tray.Visible = false; });
+                var result = await updates.CheckAsync();
+                switch (result)
+                {
+                    case UpdateCheck.Available:
+                        string version = updates.AvailableVersion ?? "?";
+                        var answer = MessageBox.Show(
+                            L10n.Format(L10nKey.NoticeUpdateMessage, version),
+                            L10n.Text(L10nKey.NoticeUpdateTitle),
+                            MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                        if (answer == DialogResult.Yes) OpenUrl(updates.ReleaseUrl);
+                        break;
+                    case UpdateCheck.UpToDate:
+                        tray.ShowBalloonTip(5000, "Cornetta",
+                            L10n.Format(L10nKey.WindowsTrayUpToDate, AppInfo.Version), ToolTipIcon.Info);
+                        break;
+                    case UpdateCheck.Failed:
+                        tray.ShowBalloonTip(5000, "Cornetta", L10n.Text(L10nKey.WindowsTrayUpdateCheckFailed), ToolTipIcon.Warning);
+                        break;
+                }
             }
-            catch (Exception ex)
+            finally
             {
-                Diagnostics.Log("Aggiornamento non riuscito: " + ex.Message);
-                tray.Visible = true;
-                tray.ShowBalloonTip(8000, "Cornetta", L10n.Text(L10nKey.WindowsTrayUpdateFailed), ToolTipIcon.Warning);
+                checkingUpdates = false;
             }
-            installing = false;
-            UpdateTrayIcon();
         }
 
         // MARK: - Avvisi
@@ -613,15 +525,7 @@ namespace Cornetta.App
 
         private void OpenFeedback()
         {
-            if (feedback != null && !feedback.IsDisposed)
-            {
-                feedback.Activate();
-                return;
-            }
-            feedback = new FeedbackForm(microphoneName);
-            feedback.FormClosed += (_, __) => feedback = null;
-            feedback.Show();
-            feedback.Activate();
+            OpenUrl(AppInfo.NewIssueUrl);
         }
 
         // MARK: - Esplora file
@@ -655,13 +559,18 @@ namespace Cornetta.App
 
         private void OpenSettings(string uri)
         {
+            OpenUrl(uri);
+        }
+
+        private void OpenUrl(string uri)
+        {
             try
             {
                 Process.Start(new ProcessStartInfo(uri) { UseShellExecute = true });
             }
             catch (Exception ex)
             {
-                Diagnostics.Log("Impostazioni non aperte: " + ex.Message);
+                Diagnostics.Log("Pagina non aperta: " + ex.Message);
             }
         }
 
@@ -760,10 +669,8 @@ namespace Cornetta.App
             catch (AggregateException) { }
             meterTimer.Stop();
             callTimer.Stop();
-            updateTimer.Stop();
             CloseNotice();
             overlay?.Close();
-            feedback?.Close();
             hotkey.Dispose();
             tray.Visible = false;
             tray.Dispose();

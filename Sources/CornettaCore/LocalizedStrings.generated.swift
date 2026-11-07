@@ -3,7 +3,6 @@ import Foundation
 
 public enum L10nKey: String, CaseIterable, Sendable {
     case accessibilityRecording = "accessibility.recording"
-    case accessibilityUpdateAvailable = "accessibility.updateAvailable"
     case appMoverBusyMessage = "appMover.busy.message"
     case appMoverBusyTitle = "appMover.busy.title"
     case appMoverFailedMessage = "appMover.failed.message"
@@ -34,21 +33,6 @@ public enum L10nKey: String, CaseIterable, Sendable {
     case errorNoAudioTitle = "error.noAudio.title"
     case errorOthersSilentMessage = "error.othersSilent.message"
     case errorOthersSilentTitle = "error.othersSilent.title"
-    case feedbackAttachDiagnostics = "feedback.attachDiagnostics"
-    case feedbackCollecting = "feedback.collecting"
-    case feedbackDiagnosticsAccessibility = "feedback.diagnostics.accessibility"
-    case feedbackEmailPlaceholder = "feedback.email.placeholder"
-    case feedbackFailed = "feedback.failed"
-    case feedbackMessageAccessibility = "feedback.message.accessibility"
-    case feedbackNamePlaceholder = "feedback.name.placeholder"
-    case feedbackPreview = "feedback.preview"
-    case feedbackSend = "feedback.send"
-    case feedbackSending = "feedback.sending"
-    case feedbackSubtitle = "feedback.subtitle"
-    case feedbackThanksMessage = "feedback.thanks.message"
-    case feedbackThanksTitle = "feedback.thanks.title"
-    case feedbackTitle = "feedback.title"
-    case feedbackWindow = "feedback.window"
     case libraryCallTitle = "library.callTitle"
     case libraryCopied = "library.copied"
     case libraryCopy = "library.copy"
@@ -123,9 +107,7 @@ public enum L10nKey: String, CaseIterable, Sendable {
     case menuScreenStop = "menu.screen.stop"
     case menuScreenTitle = "menu.screen.title"
     case menuScreenWithoutMicrophone = "menu.screen.withoutMicrophone"
-    case menuTelemetry = "menu.telemetry"
     case menuTranscribe = "menu.transcribe"
-    case menuUpdateInstall = "menu.update.install"
     case menuUpdates = "menu.updates"
     case noticeCallMessage = "notice.call.message"
     case noticeCallTitle = "notice.call.title"
@@ -151,10 +133,14 @@ public enum L10nKey: String, CaseIterable, Sendable {
     case noticeTranscriptMessageOne = "notice.transcript.message.one"
     case noticeTranscriptTitleMany = "notice.transcript.title.many"
     case noticeTranscriptTitleOne = "notice.transcript.title.one"
+    case noticeUpdateFailedMessage = "notice.update.failed.message"
+    case noticeUpdateFailedTitle = "notice.update.failed.title"
     case noticeUpdateLater = "notice.update.later"
     case noticeUpdateMessage = "notice.update.message"
     case noticeUpdateNow = "notice.update.now"
     case noticeUpdateTitle = "notice.update.title"
+    case noticeUpdateUpToDateMessage = "notice.update.upToDate.message"
+    case noticeUpdateUpToDateTitle = "notice.update.upToDate.title"
     case overlayCallEndedTitle = "overlay.callEnded.title"
     case overlayFeedbackHelp = "overlay.feedback.help"
     case overlayLevelAccessibility = "overlay.level.accessibility"
@@ -215,11 +201,6 @@ public enum L10nKey: String, CaseIterable, Sendable {
     case welcomeStepTranscript = "welcome.step.transcript"
     case welcomeWait = "welcome.wait"
     case welcomeWindow = "welcome.window"
-    case windowsFeedbackEmail = "windows.feedback.email"
-    case windowsFeedbackMessage = "windows.feedback.message"
-    case windowsFeedbackName = "windows.feedback.name"
-    case windowsFeedbackSentAccessibility = "windows.feedback.sentAccessibility"
-    case windowsFeedbackWindow = "windows.feedback.window"
     case windowsLanguageChanged = "windows.language.changed"
     case windowsNoticeAudioSettings = "windows.notice.audioSettings"
     case windowsNoticeSilenceMessage = "windows.notice.silence.message"
@@ -227,8 +208,6 @@ public enum L10nKey: String, CaseIterable, Sendable {
     case windowsNoticeSilenceTitle = "windows.notice.silence.title"
     case windowsOverlayAccessibility = "windows.overlay.accessibility"
     case windowsOverlayNoMicrophone = "windows.overlay.noMicrophone"
-    case windowsTrayInstalledOnly = "windows.tray.installedOnly"
-    case windowsTrayInstalling = "windows.tray.installing"
     case windowsTrayNoMicrophone = "windows.tray.noMicrophone"
     case windowsTrayNoOutput = "windows.tray.noOutput"
     case windowsTrayNotSaved = "windows.tray.notSaved"
@@ -246,17 +225,11 @@ public enum L10nKey: String, CaseIterable, Sendable {
     case windowsTrayStartError = "windows.tray.startError"
     case windowsTrayUpToDate = "windows.tray.upToDate"
     case windowsTrayUpdateCheckFailed = "windows.tray.updateCheckFailed"
-    case windowsTrayUpdateDownloading = "windows.tray.updateDownloading"
-    case windowsTrayUpdateFailed = "windows.tray.updateFailed"
-    case windowsTrayUpdateProgress = "windows.tray.updateProgress"
-    case windowsTrayUpdateStatus = "windows.tray.updateStatus"
-    case windowsTrayUpdateWaiting = "windows.tray.updateWaiting"
 }
 
 public enum L10n {
     private static let italian: [L10nKey: String] = [
         .accessibilityRecording: "In registrazione",
-        .accessibilityUpdateAvailable: "Aggiornamento disponibile",
         .appMoverBusyMessage: "Chiudila dal suo menu con «Esci da Cornetta», poi apri di nuovo questa copia dal disco di installazione.",
         .appMoverBusyTitle: "Non riesco a chiudere la Cornetta già aperta",
         .appMoverFailedMessage: "Trascina Cornetta nella cartella Applicazioni dal disco di installazione.",
@@ -264,7 +237,7 @@ public enum L10n {
         .appMoverInstalledMessage: "Aprila da lì con un doppio clic.",
         .appMoverInstalledTitle: "Cornetta è in Applicazioni",
         .appMoverMoveButton: "Sposta in Applicazioni",
-        .appMoverMoveMessage: "Cornetta è aperta dal disco di installazione. Spostala in Applicazioni: così si aggiorna da sola e ricorda i permessi.",
+        .appMoverMoveMessage: "Cornetta è aperta dal disco di installazione. Spostala in Applicazioni: così ricorda i permessi.",
         .appMoverMoveMessageOthers: "La Cornetta già aperta si chiude: una registrazione in corso si ferma e si salva.",
         .appMoverMoveTitle: "Sposta Cornetta in Applicazioni",
         .appMoverNewerMessage: "La versione in Applicazioni è la {0}, questa è la {1}. Apri Cornetta da Applicazioni ed espelli il disco di installazione.",
@@ -287,21 +260,6 @@ public enum L10n {
         .errorNoAudioTitle: "Cornetta non riceve audio",
         .errorOthersSilentMessage: "La chiamata è in corso ma l'audio di sistema è muto. Controlla in Impostazioni › Privacy e sicurezza › Registrazione schermo e audio di sistema che Cornetta sia attiva.",
         .errorOthersSilentTitle: "Non sento la voce degli altri",
-        .feedbackAttachDiagnostics: "Allega informazioni tecniche (versione, dispositivi audio, log). Nessun audio.",
-        .feedbackCollecting: "Raccolgo le informazioni…",
-        .feedbackDiagnosticsAccessibility: "Informazioni tecniche che vengono inviate",
-        .feedbackEmailPlaceholder: "Email per la risposta (facoltativa)",
-        .feedbackFailed: "Non riesco a inviare il feedback. Controlla la connessione e riprova.",
-        .feedbackMessageAccessibility: "Messaggio",
-        .feedbackNamePlaceholder: "Nome (facoltativo)",
-        .feedbackPreview: "Vedi cosa viene inviato",
-        .feedbackSend: "Invia feedback",
-        .feedbackSending: "Invio…",
-        .feedbackSubtitle: "Scrivi come ti viene. Se qualcosa non ha funzionato, racconta cosa stavi facendo.",
-        .feedbackThanksMessage: "Lo leggo e ti scrivo se hai lasciato l'email.",
-        .feedbackThanksTitle: "Grazie, il feedback è arrivato.",
-        .feedbackTitle: "Cosa funziona, cosa no, cosa ti manca?",
-        .feedbackWindow: "Feedback su Cornetta",
         .libraryCallTitle: "Chiamata di {0}",
         .libraryCopied: "Copiato",
         .libraryCopy: "Copia testo",
@@ -350,7 +308,7 @@ public enum L10n {
         .libraryUnavailableMessage: "La trascrizione sul Mac richiede macOS 26 o successivo. L'audio resta disponibile.",
         .libraryUnavailableTitle: "Trascrizione non disponibile",
         .libraryWindow: "Registrazioni",
-        .menuFeedback: "Invia un feedback…",
+        .menuFeedback: "Apri una segnalazione su GitHub…",
         .menuLanguage: "Lingua",
         .menuLanguageEnglish: "English",
         .menuLanguageItalian: "Italiano",
@@ -376,10 +334,8 @@ public enum L10n {
         .menuScreenStop: "Ferma il video dello schermo",
         .menuScreenTitle: "Video dello schermo",
         .menuScreenWithoutMicrophone: "Senza microfono: serve macOS 15",
-        .menuTelemetry: "Invia dati di funzionamento",
         .menuTranscribe: "Trascrivi ogni chiamata sul Mac",
-        .menuUpdateInstall: "Installa l'aggiornamento a Cornetta {0}…",
-        .menuUpdates: "Controlla aggiornamenti…",
+        .menuUpdates: "Controlla gli aggiornamenti su GitHub…",
         .noticeCallMessage: "Vuoi registrarla? Registro la tua voce e quella delle altre persone in un file.",
         .noticeCallTitle: "Chiamata in corso su {0}",
         .noticeCallEndedMessage: "Cornetta sta ancora registrando.",
@@ -387,7 +343,7 @@ public enum L10n {
         .noticeDiskMessage: "Sul disco resta meno di 1 GB. Sotto i 200 MB Cornetta ferma e salva la registrazione da sola.",
         .noticeDiskTitle: "Disco quasi pieno",
         .noticeErrorPrimary: "Apri Impostazioni",
-        .noticeFeedback: "Invia un feedback",
+        .noticeFeedback: "Segnala su GitHub",
         .noticeLongMessage: "Nessuna app di chiamata è attiva. Se hai finito, ferma e salva la registrazione.",
         .noticeLongTitle: "Cornetta registra da 3 ore",
         .noticeNotNow: "Non ora",
@@ -404,12 +360,16 @@ public enum L10n {
         .noticeTranscriptMessageOne: "{0} è trascritta, con la tua voce e quella degli altri separate.",
         .noticeTranscriptTitleMany: "{0} trascrizioni pronte",
         .noticeTranscriptTitleOne: "Trascrizione pronta",
+        .noticeUpdateFailedMessage: "Non riesco a leggere le release su GitHub. Controlla la connessione e riprova.",
+        .noticeUpdateFailedTitle: "Controllo non riuscito",
         .noticeUpdateLater: "Più tardi",
-        .noticeUpdateMessage: "È pronta Cornetta {0}. L'installazione richiede pochi secondi e l'app si riapre da sola.",
-        .noticeUpdateNow: "Aggiorna ora",
+        .noticeUpdateMessage: "Cornetta {0} è disponibile su GitHub. Apri la pagina della release per scaricarla: Cornetta non installa aggiornamenti da sola.",
+        .noticeUpdateNow: "Apri GitHub",
         .noticeUpdateTitle: "Aggiornamento disponibile",
+        .noticeUpdateUpToDateMessage: "Cornetta {0} è l'ultima release pubblicata su GitHub.",
+        .noticeUpdateUpToDateTitle: "Hai la versione più recente",
         .overlayCallEndedTitle: "La chiamata sembra finita",
-        .overlayFeedbackHelp: "Segnala un problema o un'idea a chi sviluppa Cornetta",
+        .overlayFeedbackHelp: "Segnala un problema su GitHub",
         .overlayLevelAccessibility: "{0}: livello {1} per cento",
         .overlayMicrophoneInUse: "Microfono in uso",
         .overlayOthers: "Altri",
@@ -468,11 +428,6 @@ public enum L10n {
         .welcomeStepTranscript: "A fine chiamata trovi la trascrizione in Registrazioni (⌘T).",
         .welcomeWait: "Attendi…",
         .welcomeWindow: "Benvenuto in Cornetta",
-        .windowsFeedbackEmail: "Email per la risposta (facoltativa)",
-        .windowsFeedbackMessage: "Messaggio",
-        .windowsFeedbackName: "Nome (facoltativo)",
-        .windowsFeedbackSentAccessibility: "Informazioni tecniche che vengono inviate",
-        .windowsFeedbackWindow: "Feedback su Cornetta",
         .windowsLanguageChanged: "Lingua dell'interfaccia",
         .windowsNoticeAudioSettings: "Apri impostazioni audio",
         .windowsNoticeSilenceMessage: "La chiamata è in corso, ma da {0} non arriva niente. Controlla quale uscita usa l'app della chiamata.",
@@ -480,8 +435,6 @@ public enum L10n {
         .windowsNoticeSilenceTitle: "Non sento la voce degli altri",
         .windowsOverlayAccessibility: "Cornetta, registrazione in corso",
         .windowsOverlayNoMicrophone: "Senza microfono: registro solo la chiamata",
-        .windowsTrayInstalledOnly: "Gli aggiornamenti funzionano solo nella versione installata con CornettaSetup.exe.",
-        .windowsTrayInstalling: "Sto installando l'aggiornamento: fra pochi secondi puoi registrare.",
         .windowsTrayNoMicrophone: "Nessun microfono trovato: registro solo l'audio della chiamata.",
         .windowsTrayNoOutput: "Nessuna uscita audio trovata: registro solo il microfono.",
         .windowsTrayNotSaved: "Registrazione non salvata: la recupero al prossimo avvio.",
@@ -499,16 +452,10 @@ public enum L10n {
         .windowsTrayStartError: "Non riesco ad avviare la registrazione.",
         .windowsTrayUpToDate: "Hai già la versione più recente ({0}).",
         .windowsTrayUpdateCheckFailed: "Non riesco a controllare gli aggiornamenti. Controlla la connessione e riprova.",
-        .windowsTrayUpdateDownloading: "Cornetta · Scarico l'aggiornamento…",
-        .windowsTrayUpdateFailed: "L'aggiornamento non è riuscito. Riprova più tardi.",
-        .windowsTrayUpdateProgress: "Cornetta · Aggiornamento {0}%",
-        .windowsTrayUpdateStatus: "Cornetta · Aggiornamento disponibile",
-        .windowsTrayUpdateWaiting: "L'aggiornamento parte quando fermi la registrazione.",
     ]
 
     private static let english: [L10nKey: String] = [
         .accessibilityRecording: "Recording",
-        .accessibilityUpdateAvailable: "Update available",
         .appMoverBusyMessage: "Quit it from its menu with “Quit Cornetta”, then open this copy from the installer disk again.",
         .appMoverBusyTitle: "Could not close the open Cornetta",
         .appMoverFailedMessage: "Drag Cornetta into the Applications folder from the installer disk.",
@@ -516,7 +463,7 @@ public enum L10n {
         .appMoverInstalledMessage: "Open it from there with a double click.",
         .appMoverInstalledTitle: "Cornetta is in Applications",
         .appMoverMoveButton: "Move to Applications",
-        .appMoverMoveMessage: "Cornetta is running from the installer disk. Move it to Applications so it can update itself and remember its permissions.",
+        .appMoverMoveMessage: "Cornetta is running from the installer disk. Move it to Applications so it remembers its permissions.",
         .appMoverMoveMessageOthers: "The other Cornetta window will close: an active recording will stop and be saved.",
         .appMoverMoveTitle: "Move Cornetta to Applications",
         .appMoverNewerMessage: "The version in Applications is {0}; this one is {1}. Open Cornetta from Applications and eject the installer disk.",
@@ -539,21 +486,6 @@ public enum L10n {
         .errorNoAudioTitle: "Cornetta is not receiving audio",
         .errorOthersSilentMessage: "A call is active but system audio is silent. Check System Settings › Privacy & Security › Screen & System Audio Recording to make sure Cornetta is enabled.",
         .errorOthersSilentTitle: "I cannot hear the other people",
-        .feedbackAttachDiagnostics: "Attach technical information (version, audio devices, logs). No audio.",
-        .feedbackCollecting: "Collecting information…",
-        .feedbackDiagnosticsAccessibility: "Technical information being sent",
-        .feedbackEmailPlaceholder: "Email for a reply (optional)",
-        .feedbackFailed: "Could not send feedback. Check your connection and try again.",
-        .feedbackMessageAccessibility: "Message",
-        .feedbackNamePlaceholder: "Name (optional)",
-        .feedbackPreview: "See what is sent",
-        .feedbackSend: "Send feedback",
-        .feedbackSending: "Sending…",
-        .feedbackSubtitle: "Write naturally. If something failed, tell us what you were doing.",
-        .feedbackThanksMessage: "I read it and will reply if you left an email.",
-        .feedbackThanksTitle: "Thank you, your feedback arrived.",
-        .feedbackTitle: "What works, what does not, what is missing?",
-        .feedbackWindow: "Feedback for Cornetta",
         .libraryCallTitle: "Call on {0}",
         .libraryCopied: "Copied",
         .libraryCopy: "Copy text",
@@ -602,7 +534,7 @@ public enum L10n {
         .libraryUnavailableMessage: "Transcription on this Mac requires macOS 26 or later. The audio remains available.",
         .libraryUnavailableTitle: "Transcription unavailable",
         .libraryWindow: "Recordings",
-        .menuFeedback: "Send feedback…",
+        .menuFeedback: "Open a GitHub issue…",
         .menuLanguage: "Language",
         .menuLanguageEnglish: "English",
         .menuLanguageItalian: "Italiano",
@@ -628,10 +560,8 @@ public enum L10n {
         .menuScreenStop: "Stop screen recording",
         .menuScreenTitle: "Screen recording",
         .menuScreenWithoutMicrophone: "Without microphone: requires macOS 15",
-        .menuTelemetry: "Send usage data",
         .menuTranscribe: "Transcribe every call on this Mac",
-        .menuUpdateInstall: "Install Cornetta {0} update…",
-        .menuUpdates: "Check for updates…",
+        .menuUpdates: "Check for updates on GitHub…",
         .noticeCallMessage: "Do you want to record it? I will put your voice and the other people in one file.",
         .noticeCallTitle: "Call in progress on {0}",
         .noticeCallEndedMessage: "Cornetta is still recording.",
@@ -639,7 +569,7 @@ public enum L10n {
         .noticeDiskMessage: "Less than 1 GB remains on disk. Below 200 MB Cornetta stops and saves the recording automatically.",
         .noticeDiskTitle: "Disk almost full",
         .noticeErrorPrimary: "Open Settings",
-        .noticeFeedback: "Send feedback",
+        .noticeFeedback: "Report on GitHub",
         .noticeLongMessage: "No calling app is active. If you are done, stop and save the recording.",
         .noticeLongTitle: "Cornetta has been recording for 3 hours",
         .noticeNotNow: "Not now",
@@ -656,12 +586,16 @@ public enum L10n {
         .noticeTranscriptMessageOne: "{0} is transcribed, with your voice and the other people separated.",
         .noticeTranscriptTitleMany: "{0} transcripts ready",
         .noticeTranscriptTitleOne: "Transcript ready",
+        .noticeUpdateFailedMessage: "Could not read the GitHub releases. Check your connection and try again.",
+        .noticeUpdateFailedTitle: "Update check failed",
         .noticeUpdateLater: "Later",
-        .noticeUpdateMessage: "Cornetta {0} is ready. Installing takes a few seconds and the app reopens automatically.",
-        .noticeUpdateNow: "Update now",
+        .noticeUpdateMessage: "Cornetta {0} is available on GitHub. Open the release page to download it: Cornetta does not install updates automatically.",
+        .noticeUpdateNow: "Open GitHub",
         .noticeUpdateTitle: "Update available",
+        .noticeUpdateUpToDateMessage: "Cornetta {0} is the latest release on GitHub.",
+        .noticeUpdateUpToDateTitle: "You have the latest version",
         .overlayCallEndedTitle: "The call appears to have ended",
-        .overlayFeedbackHelp: "Report a problem or share an idea with the Cornetta developer",
+        .overlayFeedbackHelp: "Report a problem on GitHub",
         .overlayLevelAccessibility: "{0}: {1} percent level",
         .overlayMicrophoneInUse: "Microphone in use",
         .overlayOthers: "Others",
@@ -720,11 +654,6 @@ public enum L10n {
         .welcomeStepTranscript: "After the call, find the transcript in Recordings (⌘T).",
         .welcomeWait: "Waiting…",
         .welcomeWindow: "Welcome to Cornetta",
-        .windowsFeedbackEmail: "Email for a reply (optional)",
-        .windowsFeedbackMessage: "Message",
-        .windowsFeedbackName: "Name (optional)",
-        .windowsFeedbackSentAccessibility: "Technical information being sent",
-        .windowsFeedbackWindow: "Feedback for Cornetta",
         .windowsLanguageChanged: "Interface language",
         .windowsNoticeAudioSettings: "Open audio settings",
         .windowsNoticeSilenceMessage: "A call is active, but nothing is coming from {0}. Check which output the calling app uses.",
@@ -732,8 +661,6 @@ public enum L10n {
         .windowsNoticeSilenceTitle: "I cannot hear the other people",
         .windowsOverlayAccessibility: "Cornetta, recording in progress",
         .windowsOverlayNoMicrophone: "Without a microphone: recording the call only",
-        .windowsTrayInstalledOnly: "Updates work only in the version installed with CornettaSetup.exe.",
-        .windowsTrayInstalling: "Installing the update: you can record again in a few seconds.",
         .windowsTrayNoMicrophone: "No microphone found: recording call audio only.",
         .windowsTrayNoOutput: "No audio output found: recording only the microphone.",
         .windowsTrayNotSaved: "Recording not saved: it will be recovered the next time Cornetta starts.",
@@ -751,11 +678,6 @@ public enum L10n {
         .windowsTrayStartError: "Could not start recording.",
         .windowsTrayUpToDate: "You already have the latest version ({0}).",
         .windowsTrayUpdateCheckFailed: "Could not check for updates. Check your connection and try again.",
-        .windowsTrayUpdateDownloading: "Cornetta · Downloading update…",
-        .windowsTrayUpdateFailed: "The update failed. Try again later.",
-        .windowsTrayUpdateProgress: "Cornetta · Update {0}%",
-        .windowsTrayUpdateStatus: "Cornetta · Update available",
-        .windowsTrayUpdateWaiting: "The update starts when you stop recording.",
     ]
 
     public static func text(_ key: L10nKey, language: AppLanguage) -> String {

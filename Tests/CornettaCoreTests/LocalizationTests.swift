@@ -62,6 +62,7 @@ struct LocalizationTests {
         #expect(L10n.format(.libraryStatusTranscribing, language: .italian, "42") == "Trascrivo 42%")
         #expect(L10n.format(.libraryStatusTranscribing, language: .english, "42") == "Transcribing 42%")
         #expect(L10n.format(.noticeUpdateMessage, language: .english, "0.5.0")
-                == "Cornetta 0.5.0 is ready. Installing takes a few seconds and the app reopens automatically.")
+                == "Cornetta 0.5.0 is available on GitHub. Open the release page to download it: "
+                + "Cornetta does not install updates automatically.")
     }
 }

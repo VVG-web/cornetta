@@ -1,0 +1,33 @@
+# Cornetta
+
+> Cornetta is a free, open-source call recorder for Mac (macOS 14.4 or later, Apple Silicon and Intel), with a beta version for Windows 10 and 11. It records your voice from the microphone and the other people from system audio into one .m4a file, with any calling app: WhatsApp, FaceTime, Google Meet, Zoom, Microsoft Teams, Slack, Discord, Telegram, browser calls. No account, no audio driver, no subscription. This is the VVG-web/cornetta-en fork, based on the original project by Federico Nejrotti. Source code: https://github.com/VVG-web/cornetta-en (MIT license).
+
+Key facts:
+- Price: free. No account, no ads. Open source under the MIT license.
+- Privacy: recordings and transcripts never leave the computer. This version has no telemetry, no analytics, no cookies, no installation identifier and no feedback server. The app opens no background connections.
+- Update check: only when the user chooses "Check for updates on GitHub". The app asks GitHub for the latest release of VVG-web/cornetta-en; the request carries the app version and a normal User-Agent, never audio, text or file names. The app does not download or install updates automatically.
+- Feedback: the button opens a new public GitHub issue in the browser. Nothing is submitted automatically by the app.
+- Website: static. No Plausible, Telegram, cookies or visit counting.
+- How it works: Core Audio process taps (macOS 14.2+) capture system audio; the microphone and the tap share one private aggregate device, so both voices stay in sync. No BlackHole or virtual driver.
+- Output: .m4a (AAC, 48 kHz, stereo) in ~/Music/Cornetta, file named "Chiamata YYYY-MM-DD HH.MM.m4a".
+- Your voice is levelled up to +24 dB to match the call; the boost pauses while the other person talks so speaker echo is not amplified.
+- Local transcription (macOS 26+): when a recording ends, Cornetta transcribes it on the Mac with Apple speech recognition, labels lines as "Tu" (you) or "Altri" (others) from the separate tracks, removes speaker echo, and saves a Markdown file next to the audio. Recordings window with search and playback from any timestamp.
+- Screen recording (Mac): pick a display, window or app in the macOS picker; the video is saved already compressed (HEVC up to 1920 px, 30 fps, AAC audio) in ~/Movies/Cornetta, optionally with the microphone (macOS 15+) and Mac audio. No Screen Recording permission is needed with the system picker.
+- Detects when an app starts using the microphone and offers to record; suggests stopping when the call ends.
+- Floating panel while recording: elapsed time, level meters for you and the others, Stop, Feedback.
+- Updates are manual: GitHub Releases, no Sparkle or Velopack auto-update.
+- First launch: the app is ad-hoc signed, so macOS asks to confirm it in System Settings › Privacy & Security › Open Anyway. Two permissions: Microphone and System Audio Recording.
+- Windows (beta): Windows 10 and 11, per-user installer without administrator rights, no automatic update. Records the microphone assigned to communications and both the communications and the default output into one .m4a file, recoverable after a crash, and detects calls from active microphone audio sessions. Transcription is Mac-only for now.
+- Not available on iPhone or Android: iOS gives no app access to call audio, Android blocks it for regular apps since Android 10.
+- Legal (Italy): recording a conversation you take part in is lawful for personal use; sharing it without consent is not. Other countries differ.
+
+## Pages
+- [Cornetta (Italiano)](https://github.com/VVG-web/cornetta-en): repository and download page
+- [Cornetta (English)](https://github.com/VVG-web/cornetta-en): repository and download page
+- [Privacy (English)](/en/privacy/): what stays on the computer and the only GitHub actions
+- [Privacy (Italiano)](/privacy/): the same details in Italian
+- [Source code](https://github.com/VVG-web/cornetta-en): Swift (Mac), C# (Windows), static site
+
+## Downloads
+- [Latest GitHub release](https://github.com/VVG-web/cornetta-en/releases/latest): macOS disk image and Windows installer
+- [All releases](https://github.com/VVG-web/cornetta-en/releases): release notes and SHA-256 fingerprints

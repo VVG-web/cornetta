@@ -1,13 +1,12 @@
 #!/bin/bash
-# Compila Cornetta (universale arm64 + x86_64), monta Cornetta.app con Sparkle, la firma e produce il DMG.
+# Compila Cornetta (universale arm64 + x86_64), monta Cornetta.app, la firma e produce il DMG.
 #   VERSION=0.2.0 scripts/build-dmg.sh   →   dist/Cornetta-0.2.0.dmg
 # Firma: usa l'identità «Cornetta Self-Signed» se è nel portachiavi (permessi stabili fra versioni),
 # altrimenti firma ad-hoc. SIGN_IDENTITY la sovrascrive.
 # Notarizzazione Apple (niente «Apri comunque» al primo avvio): serve un certificato
-# «Developer ID Application» e un profilo notarytool salvato nel portachiavi:
-#   SIGN_IDENTITY="Developer ID Application: Nome (TEAMID)" NOTARY_PROFILE=cornetta-notary scripts/release.sh X.Y.Z
+# «Developer ID Application» e un profilo notarytool salvato nel portachiavi.
 # Con un Developer ID il runtime rinforzato è automatico. Col certificato locale no: senza Team ID
-# il runtime rinforzato impedisce all'app di caricare Sparkle (verificato il 14/10/2026).
+# il runtime rinforzato non serve e non viene attivato.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -18,7 +17,7 @@ if [ -z "${SIGN_IDENTITY:-}" ]; then
 fi
 if [ "$SIGN_IDENTITY" = "-" ]; then
   echo "⚠ Firma ad-hoc: manca «Cornetta Self-Signed» nel portachiavi. Va bene per provare, non per distribuire:"
-  echo "  a ogni versione macOS richiede di nuovo microfono e audio di sistema. release.sh si ferma."
+  echo "  a ogni versione macOS richiede di nuovo microfono e audio di sistema."
 fi
 
 echo "→ Compilo (release, arm64 + x86_64)"
@@ -53,23 +52,15 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Framewor
 lipo -create "$ARM" "$X86" -output "$APP/Contents/MacOS/Cornetta"
 cp build/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cp -R Sources/Cornetta/Resources/*.lproj "$APP/Contents/Resources/"
-SPARKLE=".build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
-ditto "$SPARKLE" "$APP/Contents/Frameworks/Sparkle.framework"
 sed -e "s/__VERSION__/$VERSION/" -e "s/__BUILD__/$VERSION/" Resources/Info.plist > "$APP/Contents/Info.plist"
 plutil -lint "$APP/Contents/Info.plist" >/dev/null
 
 echo "→ Firma ($SIGN_IDENTITY)"
-SP="$APP/Contents/Frameworks/Sparkle.framework/Versions/B"
 RUNTIME=()
 if [[ "$SIGN_IDENTITY" == "Developer ID Application"* ]]; then
   RUNTIME=(--options runtime --timestamp)
 fi
 sign() { codesign --force --sign "$SIGN_IDENTITY" ${RUNTIME[@]+"${RUNTIME[@]}"} "$@"; }
-sign "$SP/XPCServices/Installer.xpc"
-sign --preserve-metadata=entitlements "$SP/XPCServices/Downloader.xpc"
-sign "$SP/Autoupdate"
-sign "$SP/Updater.app"
-sign "$APP/Contents/Frameworks/Sparkle.framework"
 sign --identifier com.stellakamikaze.cornetta --entitlements Resources/Cornetta.entitlements "$APP"
 codesign --verify --deep --strict "$APP"
 

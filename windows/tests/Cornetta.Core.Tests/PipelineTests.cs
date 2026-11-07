@@ -215,47 +215,6 @@ namespace Cornetta.Core.Tests
         }
     }
 
-    public class FeedbackPayloadTests
-    {
-        [Fact]
-        public void PayloadMatchesTheMacSchemaWithPlatform()
-        {
-            var app = new FeedbackAppInfo { Version = "0.3.0", Build = "12", Os = "Windows 11 23H2", Arch = "x64", Microphone = "Microfono (Realtek)" };
-            string json = FeedbackPayload.ToJson("Ciao \"Federico\"\nriga due", "Mario", "", "log", app);
-            Assert.Equal(
-                "{\"message\":\"Ciao \\\"Federico\\\"\\nriga due\",\"name\":\"Mario\",\"email\":\"\",\"diagnostics\":\"log\",\"platform\":\"windows\"," +
-                "\"app\":{\"version\":\"0.3.0\",\"build\":\"12\",\"os\":\"Windows 11 23H2\",\"arch\":\"x64\",\"microphone\":\"Microfono (Realtek)\"}}",
-                json);
-        }
-
-        [Fact]
-        public void MicrophoneTravelsOnlyWithDiagnostics()
-        {
-            Assert.Null(FeedbackPayload.MicrophoneToSend("AirPods di Mario", false));
-            Assert.Equal("AirPods di Mario", FeedbackPayload.MicrophoneToSend("AirPods di Mario", true));
-            var app = new FeedbackAppInfo { Version = "0.3.0", Microphone = FeedbackPayload.MicrophoneToSend("AirPods di Mario", false) ?? "" };
-            string json = FeedbackPayload.ToJson("ciao", "", "", null, app);
-            Assert.Contains("\"microphone\":\"\"", json);
-            Assert.DoesNotContain("Mario", json);
-        }
-
-        [Fact]
-        public void ControlCharactersAreEscaped()
-        {
-            Assert.Equal("\"a\\u0001b\\\\c\"", FeedbackPayload.Quote("a\u0001b\\c"));
-            Assert.Equal("\"perché è così\"", FeedbackPayload.Quote("perché è così"));
-        }
-
-        [Fact]
-        public void ResponsesAreUnderstood()
-        {
-            Assert.Null(FeedbackResponse.ErrorFor(200, "{\"ok\":true,\"id\":\"fb:1\"}"));
-            Assert.Equal("Troppi invii, riprova tra un'ora", FeedbackResponse.ErrorFor(429, "{\"ok\":false,\"error\":\"Troppi invii, riprova tra un'ora\"}"));
-            Assert.Equal(FeedbackResponse.GenericError, FeedbackResponse.ErrorFor(502, "<html>Bad gateway</html>"));
-            Assert.Equal(FeedbackResponse.GenericError, FeedbackResponse.ErrorFor(200, ""));
-        }
-    }
-
     internal sealed class MemorySink : IAudioSink
     {
         public List<float> Left { get; } = new List<float>();

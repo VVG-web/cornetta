@@ -354,7 +354,6 @@ final class Library: ObservableObject {
             try? FileManager.default.removeItem(at: failureURL(for: url))
             transcripts[id] = transcript
             statuses[id] = .done
-            Telemetry.send(.trascrizione, outcome: "ok")
             Diagnostics.log(String(format: "Trascrizione pronta: %@, %d frasi in %.1f s", id, segments.count, Date().timeIntervalSince(started)))
             if let recording = recordings.first(where: { $0.id == id }) { onTranscriptReady?(recording) }
         } catch {
@@ -365,7 +364,6 @@ final class Library: ObservableObject {
                 try? FileManager.default.createDirectory(at: transcriptsRoot, withIntermediateDirectories: true)
                 try? JSONEncoder().encode(failed).write(to: failureURL(for: url), options: .atomic)
             }
-            Telemetry.send(.trascrizione, outcome: "errore", code: TelemetryFields.errorCode(error))
             Diagnostics.log("Trascrizione non riuscita: \(id): \(error.localizedDescription)")
         }
     }

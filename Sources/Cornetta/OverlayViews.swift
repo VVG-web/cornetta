@@ -50,7 +50,7 @@ struct RecordingOverlayView: View {
                     Label("Feedback", systemImage: "bubble.left.and.exclamationmark.bubble.right")
                 }
                 .controlSize(.small)
-                .help("Segnala un problema o un'idea a chi sviluppa Cornetta")
+                .help(tr(.overlayFeedbackHelp))
             }
         }
         .frame(width: 400)

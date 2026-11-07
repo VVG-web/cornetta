@@ -54,9 +54,11 @@ final class RecorderModel: ObservableObject {
     private var noticePanel: FloatingPanel?
     private var noticeBuilder: (() -> AnyView)?
     private var noticeKind: String?
-    private var feedbackWindow: NSWindow?
-    private var feedbackLanguageObserver: NSObjectProtocol?
-    private var pendingUpdateNotice: String?
+    private struct PendingUpdate {
+        let version: String
+        let url: URL
+    }
+    private var pendingUpdateNotice: PendingUpdate?
     private var pendingRecoveryFailures: [URL] = []
     private var pendingTranscripts: [Library.Recording] = []
     private var transcriptsInNotice: [Library.Recording] = []
@@ -77,9 +79,6 @@ final class RecorderModel: ObservableObject {
         // Come su Windows: a coperchio chiuso la registrazione si ferma e si salva, non riprende al risveglio.
         _ = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.stopForSleep() }
-        }
-        UpdateManager.shared.onUpdateFound = { [weak self] version in
-            self?.announceUpdate(version)
         }
         Library.shared.onTranscriptReady = { [weak self] recording in
             self?.announceTranscript(recording)
@@ -127,12 +126,10 @@ final class RecorderModel: ObservableObject {
             defer { self?.saved(url) }
             switch result {
             case .success(let saved):
-                Telemetry.send(.registrazione, outcome: "ok", seconds: saved.seconds)
                 self?.lastFile = saved.recording
                 self?.message = tr(.recordingSaved, saved.recording.lastPathComponent)
                 Library.shared.recordingFinished(saved.recording)
             case .failure(let error):
-                Telemetry.send(.registrazione, outcome: "errore", code: TelemetryFields.errorCode(error, prefix: "salvataggio"))
                 Diagnostics.log("Salvataggio non riuscito: \(error.localizedDescription)")
                 self?.message = tr(.recordingSaveFailed)
             }
@@ -146,7 +143,6 @@ final class RecorderModel: ObservableObject {
         do {
             try recorder.start(useMicrophone: micAllowed)
         } catch {
-            Telemetry.send(.registrazione, outcome: "errore", code: TelemetryFields.errorCode(error, prefix: "avvio"))
             Diagnostics.log("Avvio registrazione non riuscito: \(error.localizedDescription)")
             message = tr(.recordingErrorTitle)
             // Il menu è chiuso: senza avviso chi ha premuto «Registra» crede che Cornetta registri.
@@ -386,7 +382,6 @@ final class RecorderModel: ObservableObject {
         case .microphoneChanged(let name):
             microphoneName = name
         case .failure(let text):
-            Telemetry.send(.registrazione, outcome: "errore", code: "interrotta", seconds: Date().timeIntervalSince(startedAt ?? Date()))
             finish()
             Diagnostics.log("Registrazione interrotta: \(text)")
             message = tr(.errorInterruptedTitle)
@@ -504,19 +499,56 @@ final class RecorderModel: ObservableObject {
 
     // MARK: - Aggiornamenti
 
-    func announceUpdate(_ version: String) {
+    func checkForUpdates() {
+        guard !UpdateManager.shared.isChecking else { return }
+        Task {
+            switch await UpdateManager.shared.check() {
+            case .available(let version, let url):
+                announceUpdate(version, url: url)
+            case .upToDate(let current):
+                announceUpToDate(current)
+            case .failed:
+                announceUpdateFailure()
+            }
+        }
+    }
+
+    private func announceUpdate(_ version: String, url: URL) {
         // Durante una registrazione l'avviso aspetta che sia salvata: niente distrazioni in chiamata,
-        // e «Aggiorna ora» non riavvia l'app a conversione in corso.
-        guard !hasUnsavedWork, !ScreenRecordingModel.shared.hasUnsavedWork else { pendingUpdateNotice = version; return }
+        // e «Apri GitHub» non interrompe una conversione in corso.
+        guard !hasUnsavedWork, !ScreenRecordingModel.shared.hasUnsavedWork else {
+            pendingUpdateNotice = PendingUpdate(version: version, url: url)
+            return
+        }
         showNotice(kind: "update") { NoticeView(
             icon: "arrow.down.circle.fill", tint: .blue,
             title: tr(.noticeUpdateTitle),
             message: tr(.noticeUpdateMessage, version),
             primary: tr(.noticeUpdateNow), secondary: tr(.noticeUpdateLater),
-            onPrimary: { [weak self] in self?.closeNotice(); UpdateManager.shared.installOrCheck() },
+            onPrimary: { [weak self] in self?.closeNotice(); NSWorkspace.shared.open(url) },
             onSecondary: { [weak self] in self?.closeNotice() }) }
-        requeueNotice = { [weak self] in self?.pendingUpdateNotice = version }
+        requeueNotice = { [weak self] in self?.pendingUpdateNotice = PendingUpdate(version: version, url: url) }
         NSSound(named: "Glass")?.play()
+    }
+
+    private func announceUpToDate(_ current: String) {
+        showNotice(kind: "update") { NoticeView(
+            icon: "checkmark.circle.fill", tint: .green,
+            title: tr(.noticeUpdateUpToDateTitle),
+            message: tr(.noticeUpdateUpToDateMessage, current),
+            primary: tr(.noticeUpdateNow), secondary: tr(.commonClose),
+            onPrimary: { [weak self] in self?.closeNotice(); NSWorkspace.shared.open(AppInfo.latestReleaseURL) },
+            onSecondary: { [weak self] in self?.closeNotice() }) }
+    }
+
+    private func announceUpdateFailure() {
+        showNotice(kind: "update") { NoticeView(
+            icon: "exclamationmark.triangle.fill", tint: .orange,
+            title: tr(.noticeUpdateFailedTitle),
+            message: tr(.noticeUpdateFailedMessage),
+            primary: tr(.noticeUpdateNow), secondary: tr(.commonClose),
+            onPrimary: { [weak self] in self?.closeNotice(); NSWorkspace.shared.open(AppInfo.latestReleaseURL) },
+            onSecondary: { [weak self] in self?.closeNotice() }) }
     }
 
     // MARK: - Trascrizioni
@@ -560,9 +592,9 @@ final class RecorderModel: ObservableObject {
     /// salvata e con il posto libero, in quest'ordine.
     private func showPendingNotices() {
         guard !isRecording, !isStarting, !hasUnsavedWork else { return }
-        if let version = pendingUpdateNotice, noticeKind == nil {
+        if let update = pendingUpdateNotice, noticeKind == nil {
             pendingUpdateNotice = nil
-            announceUpdate(version)
+            announceUpdate(update.version, url: update.url)
         } else if !pendingRecoveryFailures.isEmpty, noticeKind == nil {
             showRecoveryFailedNotice(pendingRecoveryFailures.removeFirst())
         } else if !pendingTranscripts.isEmpty, noticeKind == nil || noticeKind == "transcript" {
@@ -606,30 +638,7 @@ final class RecorderModel: ObservableObject {
     // MARK: - Feedback
 
     func openFeedback() {
-        if let feedbackWindow {
-            NSApp.activate(ignoringOtherApps: true)
-            feedbackWindow.makeKeyAndOrderFront(nil)
-            return
-        }
-        let window = NSWindow(contentRect: .zero, styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        window.title = tr(.feedbackWindow)
-        window.isReleasedWhenClosed = false
-        window.level = .floating
-        window.contentView = NSHostingView(rootView: FeedbackView(microphone: microphoneName) { [weak self] in
-            self?.feedbackWindow?.close()
-            self?.feedbackWindow = nil
-        }.localizedRoot())
-        window.center()
-        feedbackWindow = window
-        if feedbackLanguageObserver == nil {
-            feedbackLanguageObserver = NotificationCenter.default.addObserver(
-                forName: .cornettaLanguageChanged, object: nil, queue: .main
-            ) { [weak self] _ in
-                MainActor.assumeIsolated { self?.feedbackWindow?.title = tr(.feedbackWindow) }
-            }
-        }
-        NSApp.activate(ignoringOtherApps: true)
-        window.makeKeyAndOrderFront(nil)
+        FeedbackLink.open()
     }
 
     // MARK: - Dimostrazione (per gli screenshot del sito)

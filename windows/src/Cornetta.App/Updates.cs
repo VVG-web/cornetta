@@ -1,14 +1,15 @@
 using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Cornetta.Core;
-using Velopack;
 
 namespace Cornetta.App
 {
@@ -18,7 +19,6 @@ namespace Cornetta.App
         public static readonly Icon App = Load("cornetta.ico", 32);
         public static readonly Icon Idle = Load("tray-idle.ico", SystemInformation.SmallIconSize.Width);
         public static readonly Icon Recording = Load("tray-recording.ico", SystemInformation.SmallIconSize.Width);
-        public static readonly Icon Update = Load("tray-update.ico", SystemInformation.SmallIconSize.Width);
 
         private static Icon Load(string name, int size)
         {
@@ -30,150 +30,105 @@ namespace Cornetta.App
         }
     }
 
-    /// <summary>Esito di un controllo degli aggiornamenti.</summary>
-    internal enum UpdateCheck { NotInstalled, UpToDate, Found, Failed }
+    /// <summary>Esito di un controllo manuale degli aggiornamenti.</summary>
+    internal enum UpdateCheck { UpToDate, Available, Failed }
 
     /// <summary>
-    /// Aggiornamenti da remoto con Velopack: il feed sta in https://cornetta.stellakamikaze.org/windows/
-    /// (releases.win.json più i pacchetti .nupkg). Controllo all'avvio e ogni 4 ore.
-    /// Il feed è firmato (releases.win.json.sig, vedi FeedSignature): senza firma valida l'app non aggiorna.
+    /// Controllo manuale delle release su GitHub. Non parte niente all'avvio e non c'è nessun timer:
+    /// la richiesta esiste solo dopo «Controlla gli aggiornamenti su GitHub…». Non scarica e non installa nulla.
     /// </summary>
     internal sealed class UpdateService
     {
-        private const string FeedFile = "releases.win.json";
         private static readonly HttpClient Client = CreateClient();
-        private readonly UpdateManager? manager;
-        private readonly string feed;
-        private UpdateInfo? update;
+        private string? availableVersion;
+        private string releaseUrl = AppInfo.LatestReleaseUrl;
 
         private static HttpClient CreateClient()
         {
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
-            return new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+            return new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
         }
 
-        public UpdateService()
-        {
-            feed = Settings.FeedOverride ?? AppInfo.UpdateFeedUrl;
-            try
-            {
-                manager = new UpdateManager(feed);
-            }
-            catch (Exception ex)
-            {
-                Diagnostics.Log("Aggiornamenti non disponibili: " + ex.Message);
-            }
-        }
+        public string? AvailableVersion => availableVersion;
 
-        /// <summary>Vero se l'app è installata con Setup (in sviluppo gli aggiornamenti sono spenti).</summary>
-        public bool IsInstalled
-        {
-            get
-            {
-                try { return manager?.IsInstalled == true; }
-                catch (Exception) { return false; }
-            }
-        }
-
-        /// <summary>Versione pronta da installare, se c'è.</summary>
-        public string? AvailableVersion => update?.TargetFullRelease.Version.ToString();
+        public string ReleaseUrl => releaseUrl;
 
         public async Task<UpdateCheck> CheckAsync()
         {
-            if (manager == null || !IsInstalled) return UpdateCheck.NotInstalled;
+            availableVersion = null;
+            releaseUrl = AppInfo.LatestReleaseUrl;
             try
             {
-                var info = await manager.CheckForUpdatesAsync().ConfigureAwait(true);
-                if (info == null) return UpdateCheck.UpToDate;
-                string? refusal = await SignedFeedRefusal(info).ConfigureAwait(true);
-                if (refusal != null)
+                using (var request = new HttpRequestMessage(HttpMethod.Get, AppInfo.LatestReleaseApiUrl))
                 {
-                    Diagnostics.Log("Aggiornamento " + info.TargetFullRelease.Version + " rifiutato: " + refusal);
-                    update = null;
-                    return UpdateCheck.Failed;
+                    request.Headers.UserAgent.ParseAdd("Cornetta/" + AppInfo.Version);
+                    request.Headers.Accept.ParseAdd("application/vnd.github+json");
+                    request.Headers.CacheControl = new System.Net.Http.Headers.CacheControlHeaderValue { NoCache = true };
+                    using (var response = await Client.SendAsync(request).ConfigureAwait(true))
+                    {
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            Diagnostics.Log("Controllo aggiornamenti: HTTP " + (int)response.StatusCode);
+                            return UpdateCheck.Failed;
+                        }
+                        string json = await response.Content.ReadAsStringAsync().ConfigureAwait(true);
+                        Release? release = Parse(json);
+                        if (release?.TagName == null) return UpdateCheck.Failed;
+                        string? version = ReleaseVersion.Normalized(release.TagName);
+                        if (version == null)
+                        {
+                            Diagnostics.Log("Controllo aggiornamenti: tag non riconosciuto");
+                            return UpdateCheck.Failed;
+                        }
+                        string current = AppInfo.Version == "dev" ? "0.0.0" : AppInfo.Version;
+                        if (!ReleaseVersion.IsNewer(release.TagName, current)) return UpdateCheck.UpToDate;
+                        availableVersion = version;
+                        releaseUrl = SafeReleaseUrl(release.HtmlUrl);
+                        Diagnostics.Log("Aggiornamento disponibile su GitHub: " + version);
+                        return UpdateCheck.Available;
+                    }
                 }
-                bool isNew = update == null || update.TargetFullRelease.Version.ToString() != info.TargetFullRelease.Version.ToString();
-                update = info;
-                if (isNew) Diagnostics.Log("Aggiornamento trovato: " + info.TargetFullRelease.Version);
-                return UpdateCheck.Found;
             }
             catch (Exception ex)
             {
-                Diagnostics.Log("Controllo aggiornamenti: " + ex.Message);
+                Diagnostics.Log("Controllo aggiornamenti non riuscito: " + ex.GetBaseException().Message);
                 return UpdateCheck.Failed;
             }
         }
 
-        /// <summary>Scarica, installa e riapre Cornetta. Se va a buon fine il processo termina qui.</summary>
-        public async Task InstallAsync(Action<int>? progress, Action beforeRestart)
+        private static Release? Parse(string json)
         {
-            // Copia locale: durante gli await un controllo del timer o del menu può cambiare il campo update.
-            var target = update;
-            if (manager == null || target == null) return;
-            // Di nuovo subito prima di scaricare: dal controllo possono essere passate ore.
-            string? refusal = await SignedFeedRefusal(target).ConfigureAwait(true);
-            if (refusal != null)
-            {
-                Diagnostics.Log("Aggiornamento " + target.TargetFullRelease.Version + " rifiutato: " + refusal);
-                if (ReferenceEquals(update, target)) update = null;
-                throw new InvalidOperationException("Feed degli aggiornamenti senza firma valida: " + refusal);
-            }
-            await manager.DownloadUpdatesAsync(target, progress).ConfigureAwait(true);
-            Diagnostics.Log("Installo l'aggiornamento " + target.TargetFullRelease.Version);
-            beforeRestart();
-            manager.ApplyUpdatesAndRestart(target.TargetFullRelease);
-        }
-
-        /// <summary>
-        /// Null se il feed firmato copre ogni pacchetto che Velopack scaricherà (completo e delta), altrimenti il motivo.
-        /// Velopack poi controlla l'hash del file scaricato con quello del pacchetto, che qui risulta firmato.
-        /// </summary>
-        private async Task<string?> SignedFeedRefusal(UpdateInfo info)
-        {
-            byte[] feedBytes;
-            string signature;
             try
             {
-                feedBytes = await ReadFeedFile(FeedFile).ConfigureAwait(true);
-                signature = System.Text.Encoding.ASCII.GetString(await ReadFeedFile(FeedFile + ".sig").ConfigureAwait(true));
-            }
-            catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException || ex is WebException || ex is IOException || ex is UnauthorizedAccessException)
-            {
-                return "firma del feed non scaricata (" + ex.Message + ")";
-            }
-            string? problem = FeedSignature.Verify(feedBytes, signature, AppInfo.UpdateFeedPublicKey);
-            if (problem != null) return problem;
-            var signed = FeedSignature.ParseAssets(feedBytes);
-            if (signed == null) return "feed firmato illeggibile";
-            var wanted = new List<VelopackAsset> { info.TargetFullRelease };
-            if (info.DeltasToTarget != null) wanted.AddRange(info.DeltasToTarget);
-            foreach (var asset in wanted)
-            {
-                problem = FeedSignature.Covers(signed, new FeedAsset
+                var serializer = new DataContractJsonSerializer(typeof(Release));
+                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(json)))
                 {
-                    FileName = asset.FileName ?? "",
-                    Sha1 = asset.SHA1 ?? "",
-                    Sha256 = asset.SHA256 ?? "",
-                    Size = asset.Size,
-                });
-                if (problem != null) return problem;
-            }
-            return null;
-        }
-
-        /// <summary>Un file accanto al feed: in rete, oppure nella cartella di FeedOverride per le prove.</summary>
-        private async Task<byte[]> ReadFeedFile(string name)
-        {
-            if (feed.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || feed.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-            {
-                string url = feed.TrimEnd('/') + "/" + name;
-                using (var response = await Client.GetAsync(url).ConfigureAwait(true))
-                {
-                    if (!response.IsSuccessStatusCode) throw new HttpRequestException("HTTP " + (int)response.StatusCode + " per " + name);
-                    return await response.Content.ReadAsByteArrayAsync().ConfigureAwait(true);
+                    return serializer.ReadObject(stream) as Release;
                 }
             }
-            return File.ReadAllBytes(Path.Combine(feed, name));
+            catch (SerializationException) { return null; }
+            catch (ArgumentException) { return null; }
+            catch (InvalidOperationException) { return null; }
+        }
+
+        /// <summary>L'URL apre solo una release del repository fork: il resto non viene mai passato al browser.</summary>
+        private static string SafeReleaseUrl(string? raw)
+        {
+            if (Uri.TryCreate(raw, UriKind.Absolute, out Uri? uri)
+                && uri.Scheme == Uri.UriSchemeHttps
+                && uri.Host == "github.com"
+                && uri.AbsolutePath.StartsWith("/" + AppInfo.GithubRepository + "/releases/", StringComparison.Ordinal))
+            {
+                return uri.ToString();
+            }
+            return AppInfo.LatestReleaseUrl;
+        }
+
+        [DataContract]
+        private sealed class Release
+        {
+            [DataMember(Name = "tag_name")] public string? TagName { get; set; }
+            [DataMember(Name = "html_url")] public string? HtmlUrl { get; set; }
         }
     }
 

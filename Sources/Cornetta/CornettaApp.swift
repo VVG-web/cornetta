@@ -20,9 +20,6 @@ struct CornettaApp: App {
             } else if screen.isRecording {
                 Image(nsImage: Self.recordingIcon)
                 Text(screen.elapsedText)
-            } else if updates.availableVersion != nil {
-                Image(systemName: "phone.arrow.down.left")
-                Image(nsImage: Self.updateBadge)
             } else {
                 Image(systemName: "phone")
             }
@@ -33,11 +30,6 @@ struct CornettaApp: App {
     @MainActor
     private static var recordingIcon: NSImage {
         coloredSymbol("record.circle.fill", .systemRed, tr(.accessibilityRecording))
-    }
-
-    @MainActor
-    private static var updateBadge: NSImage {
-        coloredSymbol("arrow.down.circle.fill", .systemBlue, tr(.accessibilityUpdateAvailable))
     }
 
     private static func coloredSymbol(_ name: String, _ color: NSColor, _ label: String) -> NSImage {
@@ -55,11 +47,6 @@ struct MenuContent: View {
     @ObservedObject private var localization = Localization.shared
 
     var body: some View {
-        // In registrazione niente installazione: il riavvio taglierebbe la chiamata o il video.
-        if let version = updates.availableVersion, !model.isRecording, !screen.isRecording {
-            Button(localization.format(.menuUpdateInstall, version)) { updates.installOrCheck() }
-            Divider()
-        }
         Button(localization.text(model.isRecording ? .menuRecordStop : .menuRecordStart)) { model.toggle() }
             .keyboardShortcut("r")
         if model.isRecording {
@@ -97,15 +84,15 @@ struct MenuContent: View {
             Button("Mostra l'ultima registrazione") { model.revealLastFile() }
         }
         Divider()
-        Button("Invia un feedback…") { model.openFeedback() }
+        Button(localization.text(.menuFeedback)) { model.openFeedback() }
         Toggle("Mostra il pannello durante la registrazione", isOn: $model.showOverlay)
         Toggle("Proponi di registrare quando inizia una chiamata", isOn: $model.proposeOnCall)
         if SpeechEngine.isAvailable {
             Toggle("Trascrivi ogni chiamata sul Mac", isOn: Library.shared.$autoTranscribe)
         }
-        Toggle("Invia dati di funzionamento", isOn: Binding(get: { Telemetry.isEnabled }, set: { Telemetry.isEnabled = $0 }))
         Toggle("Apri all'accensione del Mac", isOn: Binding(get: { LaunchAtLogin.isEnabled }, set: { LaunchAtLogin.set($0) }))
-        Button("Controlla aggiornamenti…") { updates.installOrCheck() }
+        Button(localization.text(.menuUpdates)) { model.checkForUpdates() }
+            .disabled(updates.isChecking)
         Divider()
         Text(verbatim: "Cornetta \(AppInfo.version)")
         Picker(localization.text(.menuLanguage),
@@ -139,7 +126,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             if Self.handOffToRunningInstance() { return }
             if AppMover.offerMoveIfNeeded() { return }
-            Telemetry.appLaunched()
             _ = RecorderModel.shared
             Library.shared.reload()
             Library.shared.resumePendingTranscriptions()

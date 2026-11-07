@@ -1,57 +1,20 @@
-import CoreAudio
-import CornettaCore
 import Foundation
 
 enum AppInfo {
     static var version: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev" }
     static var build: String { Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "dev" }
-    static var macOS: String { ProcessInfo.processInfo.operatingSystemVersionString }
-    static var arch: String {
-        #if arch(arm64)
-        return "arm64"
-        #else
-        return "x86_64"
-        #endif
+
+    static let githubRepository = "VVG-web/cornetta-en"
+
+    static var latestReleaseURL: URL {
+        URL(string: "https://github.com/\(githubRepository)/releases/latest")!
     }
 
-    /// Indirizzo del servizio (feedback, download). Sta in Info.plist accanto a SUFeedURL.
-    static var serviceURL: URL {
-        let raw = Bundle.main.infoDictionary?["CornettaServiceURL"] as? String ?? "https://cornetta.stellakamikaze.org"
-        return URL(string: raw)!
+    static var latestReleaseAPIURL: URL {
+        URL(string: "https://api.github.com/repos/\(githubRepository)/releases/latest")!
     }
 
-    /// Informazioni tecniche allegate al feedback. Niente audio, niente contenuti delle chiamate.
-    static func diagnostics(microphone: String?) -> String {
-        var lines = [
-            "Cornetta \(version) (\(build)) · macOS \(macOS) · \(arch)",
-            "App: \(Bundle.main.bundlePath)",
-            "Microfono: \(microphone ?? CoreAudioInfo.defaultInputName ?? "nessuno")",
-            "Uscita: \(CoreAudioInfo.defaultOutputName ?? "nessuna")",
-            "App che usano il microfono: \(CallDetector.callApps(from: CallDetector.microphoneClients(), ownPID: getpid()).joined(separator: ", "))",
-            "",
-            "--- ultime righe del log ---",
-        ]
-        if let log = try? String(contentsOf: Diagnostics.fileURL, encoding: .utf8) {
-            lines += log.split(separator: "\n").suffix(120).map(String.init)
-        }
-        // Il nome utente nei percorsi non serve a capire un guasto.
-        return lines.joined(separator: "\n").replacingOccurrences(of: NSHomeDirectory(), with: "~")
-    }
-}
-
-enum CoreAudioInfo {
-    static var defaultInputName: String? { name(kAudioHardwarePropertyDefaultInputDevice) }
-    static var defaultOutputName: String? { name(kAudioHardwarePropertyDefaultOutputDevice) }
-
-    private static func name(_ selector: AudioObjectPropertySelector) -> String? {
-        var addr = AudioObjectPropertyAddress(mSelector: selector, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
-        var device = AudioObjectID(0)
-        var size = UInt32(MemoryLayout<AudioObjectID>.size)
-        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size, &device) == noErr, device != 0 else { return nil }
-        var nameAddr = AudioObjectPropertyAddress(mSelector: kAudioObjectPropertyName, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
-        var cf: Unmanaged<CFString>?
-        size = UInt32(MemoryLayout<CFString?>.size)
-        guard AudioObjectGetPropertyData(device, &nameAddr, 0, nil, &size, &cf) == noErr, let cf else { return nil }
-        return cf.takeRetainedValue() as String
+    static var newIssueURL: URL {
+        URL(string: "https://github.com/\(githubRepository)/issues/new")!
     }
 }

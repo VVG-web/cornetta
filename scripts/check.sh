@@ -56,7 +56,6 @@ trap cleanup EXIT
 hdiutil attach "$PACKAGE" -nobrowse -readonly -mountpoint "$MOUNT" >/dev/null
 APP="$MOUNT/Cornetta.app"
 [ -x "$APP/Contents/MacOS/Cornetta" ]
-[ -d "$APP/Contents/Frameworks/Sparkle.framework" ]
 [ "$(plutil -extract CFBundleIdentifier raw -o - "$APP/Contents/Info.plist")" = com.stellakamikaze.cornetta ]
 [ "$(plutil -extract CFBundleVersion raw -o - "$APP/Contents/Info.plist")" = "${VERSION:-0.0.0-dev}" ]
 [ -s "$APP/Contents/Resources/it.lproj/Localizable.strings" ]
@@ -72,7 +71,7 @@ codesign --verify --deep --strict "$APP"
 hdiutil detach "$MOUNT" >/dev/null
 rmdir "$MOUNT"
 trap - EXIT
-printf 'Mounted package verified: %s (arm64 + x86_64, Sparkle, signature)\n' "$PACKAGE"
+printf 'Mounted package verified: %s (arm64 + x86_64, signature)\n' "$PACKAGE"
 
 section "Windows tests (cross-platform)"
 (cd windows && dotnet test Cornetta.Windows.sln)
@@ -82,13 +81,6 @@ section "Windows Release build"
 
 section "Script tests"
 python3 -m unittest discover -s scripts/tests
-
-section "Worker tests"
-NODE=$(source scripts/lib/guardia.sh && node22) || {
-  echo "Node 22.13 or newer is required. Run nvm install && nvm use." >&2
-  exit 1
-}
-(cd worker && "$NODE" --test)
 
 if [ "${CORNETTA_SKIP_BROWSER:-0}" = 1 ]; then
   echo "Browser smoke tests skipped by CORNETTA_SKIP_BROWSER=1."

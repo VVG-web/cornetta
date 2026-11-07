@@ -55,7 +55,6 @@ namespace Cornetta.App
                 () => { }, () => { }), Path.Combine(dir, "avviso-silenzio" + suffix + ".png"));
                 }
                 Theme.Override = null;
-                Save(new FeedbackForm("Microfono (Realtek(R) Audio)"), Path.Combine(dir, "feedback.png"));
                 Console.WriteLine("Immagini in " + dir);
                 return 0;
             }
