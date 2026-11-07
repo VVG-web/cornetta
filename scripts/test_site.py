@@ -62,6 +62,15 @@ def assert_no_horizontal_overflow(page: Page) -> None:
     )
 
 
+def assert_relative_internal_urls(page: Page) -> None:
+    references = page.eval_on_selector_all(
+        "[href], [src]",
+        "elements => elements.map(element => element.getAttribute('href') || element.getAttribute('src'))",
+    )
+    absolute = [reference for reference in references if reference and reference.startswith("/")]
+    assert not absolute, absolute
+
+
 def capture(page: Page, name: str) -> None:
     page.locator("img[loading='lazy']").evaluate_all("images => images.forEach(image => image.loading = 'eager')")
     page.wait_for_function("Array.from(document.images).every(image => image.complete)")
@@ -87,6 +96,7 @@ def run(base: str, browser: Browser) -> None:
     assert page.locator("h1").is_visible()
     assert page.locator("[data-download-primary]").first.get_attribute("href") == RELEASES
     assert_no_analytics(page, requests)
+    assert_relative_internal_urls(page)
     faq = page.locator("details").first
     faq.locator("summary").click()
     assert faq.get_attribute("open") is not None
@@ -100,6 +110,7 @@ def run(base: str, browser: Browser) -> None:
     assert page.locator("[data-os='windows']").first.is_visible()
     assert page.locator("[data-download-primary]").first.get_attribute("href") == RELEASES
     assert_no_analytics(page, requests)
+    assert_relative_internal_urls(page)
     context.close()
     print("PASS Windows copy and GitHub download")
 
@@ -108,6 +119,8 @@ def run(base: str, browser: Browser) -> None:
     assert page.get_by_text("GitHub", exact=False).first.is_visible()
     assert page.locator("script[src^='http']").count() == 0
     assert_no_analytics(page, requests)
+    assert_relative_internal_urls(page)
+    capture(page, "site-en-privacy.png")
     context.close()
     print("PASS English privacy page")
 
@@ -116,6 +129,7 @@ def run(base: str, browser: Browser) -> None:
     )
     assert_no_horizontal_overflow(page)
     assert_no_analytics(page, requests)
+    assert_relative_internal_urls(page)
     capture(page, "site-en-mobile.png")
     context.close()
     print("PASS mobile layout")
@@ -125,6 +139,7 @@ def run(base: str, browser: Browser) -> None:
     assert "Cornetta" in page.title()
     assert page.locator("[data-download-primary]").first.get_attribute("href") == RELEASES
     assert_no_analytics(page, requests)
+    assert_relative_internal_urls(page)
     context.close()
     print("PASS Italian homepage")
 
